@@ -1,0 +1,52 @@
+Bienvenue dans le programme LETTRE qui affiche les lettres les plus utilisées d'une chaîne de caractères.
+
+Entrez un mot ou une phrase.
+Seules les lettres de l'alphabet sont analysées.
+Le programme ne tient pas compte des minuscules,des majuscules et des accents
+Exemple: a et A et à sont le même caractère.
+Seulement [ENTER] pour sortir : 
+
+La lettre "E" est la plus utilisée.
+
+Entrez un mot ou une phrase.
+Seules les lettres de l'alphabet sont analysées.
+Le programme ne tient pas compte des minuscules,des majuscules et des accents
+Exemple: a et A et à sont le même caractère.
+Seulement [ENTER] pour sortir : 
+
+Les lettres "J et O" sont les plus utilisées.
+
+Entrez un mot ou une phrase.
+Seules les lettres de l'alphabet sont analysées.
+Le programme ne tient pas compte des minuscules,des majuscules et des accents
+Exemple: a et A et à sont le même caractère.
+Seulement [ENTER] pour sortir : 
+
+Les lettres "A, E, N et U" sont les plus 
+utilisées.
+
+Entrez un mot ou une phrase.
+Seules les lettres de l'alphabet sont analysées.
+Le programme ne tient pas compte des minuscules,des majuscules et des accents
+Exemple: a et A et à sont le même caractère.
+Seulement [ENTER] pour sortir : 
+
+Aucune lettre n'a été utilisée.
+
+Entrez un mot ou une phrase.
+Seules les lettres de l'alphabet sont analysées.
+Le programme ne tient pas compte des minuscules,des majuscules et des accents
+Exemple: a et A et à sont le même caractère.
+Seulement [ENTER] pour sortir : 
+
+Les lettres "A, B, C, D, E, F, G, H, I, J, K, L,
+M, N, O, P, Q, R, S, T, U, V, W, X, Y et Z" sont 
+les plus utilisées.
+
+Entrez un mot ou une phrase.
+Seules les lettres de l'alphabet sont analysées.
+Le programme ne tient pas compte des minuscules,des majuscules et des accents
+Exemple: a et A et à sont le même caractère.
+Seulement [ENTER] pour sortir : 
+
+Fin normale du programme.

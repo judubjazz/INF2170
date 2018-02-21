@@ -1,0 +1,1486 @@
+; *****************************************************************
+;       Programme: LETTRE.txt    version PEP813 sous Windows
+;
+;       Ce programme analyse une chaÓne de caractËres.
+;       Les charËres accentuÈs sont acceptÈs.
+;
+;
+;       auteur:   Julien GuitÈ-Vinet
+;       courriel: guitÈ-vinet.julien@uqam.ca
+;       date:     Hiver 2017
+;       cours:    INF2170
+;       code permanent:GUIJ09058407
+; *****************************************************************
+
+         STRO    bienvenu,d ;message de bienvenue 
+demande: STRO    solicite,d ;sollicite une phrase ou une lettre
+
+         LDX     0,i         
+         STX     i,d         ;i = 0        
+while1:  CHARI   char,d      ;char input  
+         LDBYTEX char,d
+         CPX     0x000A,i      
+         BREQ    saut1       ;if char = ENTER to saut1
+         LDBYTEA chaine,x    ;correspondance dans la chaine
+         LDX     i,d
+         STBYTEA tableau,x   ;tableau[i] = char.ToUpperCase
+         CALL    estUneLe                   
+continu1:LDX     i,d         
+         ADDX    2,i         
+         STX     i,d         ;i++
+         LDBYTEA char,d
+         CPA     0x000A,i    
+         BREQ    compare     ;if char = ENTER to compare 
+         LDX     i,d 
+         CPX     82,i
+         BREQ    erreur      ;if i > 82 to erreur car il ne peut y avoir que 41 caractËres donc 82 octets     
+         BR      while1 
+saut1:   LDA     0x000A,i
+         LDX     i,d
+         STBYTEA tableau,x   ;tableau[i]= ENTER
+         BR      continu1        
+  
+    ;compare les caractËres du tableau avec l'alphabet, si Ègal ajoute 1 ‡ l'indice de la lettre dans un le tableau table2.
+    ;si le premier caractËre est [ENTER], alors fin du programme.
+    ;si le caractËre [ENTER] se trouve ‡ un autre indice que 0, alors analyse des rÈsultats.
+    ;s'il n'y a pas eu de lettres ‡ l'input, alors affiche un message qu'aucune lettre n'est utilisÈe.
+
+compare: LDA     0x0000,i   
+         LDX     0,i
+         LDBYTEA tableau,x
+         CPA     0x000A,i    
+         BREQ    fin         ;si tableau[0] = ENTER ‡ fin
+         LDA     flagErr,d 
+         CPA     0,i
+         BREQ    pasDeLet    ;si flagErr = 0, aucune lettre n'est utilisÈe
+         STX     i,d   
+while2:  LDX      i,d
+         LDBYTEA tableau,x
+         CPA     0x000A,i
+         BREQ    resultat    ;si tableau[i] = ENTER ‡ resultat
+         LDBYTEA tableau,x
+         CALL    metEnTab,i 
+ 
+      
+      ;  analyse,dans un tableau de largeur 26 rÈgissant l'alphabet,quel index ‡ le plus grand nombre de caractËres. 
+      ;  si un seul index a le plus grand nombre de caractËres, alors il n'y a qu'une seule lettre plus utilisÈes.   
+      ;  sinon on traite les indices qui contiennent le plus grand nombre de caractËres.                              
+      
+resultat:LDA     0x0001,i
+         STA     unique,d    ;au moins une lettre est utilisÈe alors unique = 1
+         LDX     0,i
+         STX     i,d         ;i = 0 // indice du premier tableau
+         STX     index,d     ;index = 0 // indice de table2
+         LDA     table2,x    
+         STA     nbrChar,d   ;nbrChar = table2[i] // le nombre d'une lettre utilisÈe
+while3:  CPX     50,i
+         BREQ    finWhil3    ;do while i < table2.length // tableau de 52 pour 26 lettres
+         ADDX    2,i         ;i++
+         LDA     table2,x
+         CPA     nbrChar,d
+         BRGT    plusGran    ;if nbrChar > table[i] to plusGran  // une lettre est plus utilisÈe
+         BREQ    equal       ;if nbrChar = table[i] to equal     // plusieurs lettres sont utilisÈes.
+         BR      while3      ;else to while3                      // sinon retour ‡ la boucle
+plusGran:STX     index,d     ;index = i
+         STA     nbrChar,d   ;nbrChar = nbr total de lettres ‡ l'indice
+         LDA     0x0001,i
+         STA     unique,d    ;seulement une lettre est plus utilisÈe alors unique = true
+         LDA     0x0000,i
+         STA     cmptX,d     ;le compteur d'indice ne sert plus, alors cmptX = 0
+         BR      while3  
+equal:   STX     index,d     ;index = i
+         STA     nbrChar,d   ;nbrChar = nombre total de lettres ‡ l'indice
+         LDA     0x0000,i
+         STA     unique,d    ;plusieurs lettres sont utilisÈes alors unique = false
+         LDA     cmptX,d
+         ADDA    1,i         
+         STA     cmptX,d     ;cmptX++
+         BR      while3          
+finWhil3:LDA     unique,d    
+         CPA     0x0001,i         
+         BREQ    uneSeule    ;if unique = true  to uneSeule
+         BR      plusieur    ;else to plusieur
+
+
+         ;une seule lettre est utilisÈe
+uneSeule:STRO    la,d        ;Une lettre est la plus utilisÈ
+         CHARO   0x0022,i    ;printf('"')
+         LDX     index,d
+         CALL    indexPrn,i
+         LDX     0,i
+         CHARO   tablFin,x   ;la lettre est affichÈe
+         CHARO   0x0022,i    ;printf('"')        
+         STRO    est,d       
+         CALL    reset,i      
+         BR      demande 
+
+         ;pluieurs caractËres doivent Ítre imprimÈs
+         ;compte le nombre de boucles 
+         ;si Ègale aux nombre de caractËres ‡ imprimer , le dernier caractËre doit Ítre prÈcÈdÈ du mot "et" non d'une virgule 
+   
+plusieur:CALL    tabFin,i    ;ajoute "les lettres " ‡ un tableau 
+         LDX     0,i
+         STX     i,d         ;for i = 0
+for1:    CPX     52,i
+         BREQ    finFor1     ;i < table2.length 
+         LDA     table2,x
+         CPA     nbrChar,d      
+         BREQ    print       ;if table2[i] = nbrChar to print // on trouve dans le tableau quel indice correspond au plus grand nombre
+         ADDX    2,i         ;else i++
+         BR      for1
+         
+print:   LDA     cmptFor,d 
+         ADDA    1,i
+         STA     cmptFor,d   ;cmptFor++
+         STX     index,d
+         CALL    indexPrn,i  ;ajoute les lettres ‡ imprimer ‡ un tableau
+         LDA     cmptX,d
+         CPA     cmptFor,d
+         BREQ    imprDern    ;if cmptX = cmptFor to imprDern // le nombre d'indices Ègal le nombre de boucle donc une derniËre lettre doit Ítre imprimÈe
+         ADDX    2,i         ;i++                             //sinon on incrÈmente l'indice
+         BR      for1  
+imprDern: LDX index2,d
+         SUBX    4,i         ;la virgule du caractËre prÈcÈdent doit Ítre enlevÈe
+         LDA     0x0020,i 
+         STBYTEA tablFin,x   ;et remplacÈe par un espace
+         ADDX    2,i
+         LDA     0x0065,i    ;tablFin[index2] = 'e'
+         STBYTEA tablFin,x
+         ADDX    2,i
+         LDA     0x0074,i    ;tablFin[index2] = 't'
+         STBYTEA tablFin,x 
+         ADDX    2,i
+         LDA     0x0020,i    ;tablFin[index2] = ' '
+         STBYTEA tablFin,x
+         ADDX    2,i
+         STX     index2,d    ;index2++       
+         LDX     index,d 
+         ADDX    2,i           
+         STX     index,d     ;i++
+         LDA     sortie,d
+         ADDA    1,i
+         STA     sortie,d      ;sortie = true
+         BR      for1  
+
+        ;ajoute "\" sont les plus utilisÈes."  ‡ tablFin       
+finFor1: LDX     index2,d
+         SUBX    4,i         ;la virgule du caractËre prÈcÈdent doit Ítre remplacÈe par un coma
+         LDA     '"',i 
+         STBYTEA tablFin,x
+         ADDX    2,i
+         LDA     ' ',i
+         STBYTEA tablFin,x
+         ADDX    2,i 
+         LDA     's',i
+         STBYTEA tablFin,x
+         ADDX    2,i
+         LDA     'o',i
+         STBYTEA tablFin,x
+         ADDX    2,i
+         LDA     'n',i
+         STBYTEA tablFin,x
+         ADDX    2,i
+         LDA     't',i
+         STBYTEA tablFin,x
+         ADDX    2,i
+         LDA     ' ',i
+         STBYTEA tablFin,x
+         ADDX    2,i
+         LDA     'l',i
+         STBYTEA tablFin,x
+         ADDX    2,i
+         LDA     'e',i
+         STBYTEA tablFin,x
+         ADDX    2,i
+         LDA     's',i
+         STBYTEA tablFin,x
+         ADDX    2,i
+         LDA     ' ',i
+         STBYTEA tablFin,x
+         ADDX    2,i
+         LDA     'p',i
+         STBYTEA tablFin,x
+         ADDX    2,i
+         LDA     'l',i
+         STBYTEA tablFin,x
+         ADDX    2,i
+         LDA     'u',i
+         STBYTEA tablFin,x
+         ADDX    2,i
+         LDA     's',i
+         STBYTEA tablFin,x
+         ADDX    2,i
+         LDA     ' ',i
+         STBYTEA tablFin,x
+         ADDX    2,i
+         LDA     'u',i
+         STBYTEA tablFin,x
+         ADDX    2,i
+         LDA     't',i
+         STBYTEA tablFin,x
+         ADDX    2,i
+         LDA     'i',i
+         STBYTEA tablFin,x
+         ADDX    2,i
+         LDA     'l',i
+         STBYTEA tablFin,x
+         ADDX    2,i
+         LDA     'i',i
+         STBYTEA tablFin,x
+         ADDX    2,i
+         LDA     's',i
+         STBYTEA tablFin,x
+         ADDX    2,i
+         LDA     'È',i
+         STBYTEA tablFin,x
+         ADDX    2,i
+         LDA     'e',i
+         STBYTEA tablFin,x
+         ADDX    2,i
+         LDA     's',i
+         STBYTEA tablFin,x
+         ADDX    2,i
+         LDA     '.',i
+         STBYTEA tablFin,x
+         ADDX    2,i
+         LDX     0,i
+
+         ;programme qui imprimme tablFin
+         ;gËre des exceptions de saut de lignes pour les caractËres L, M , s, e, l, p et u
+         ;sinon saut de ligne au caractËre 50
+		 
+while4:  LDBYTEA tablFin,x
+         CPA     0,i         
+         BREQ    finWhil4    ;fin du tableau
+         CALL    lettreL     ;gËre l'exception de la lettre L
+         CALL    lettreM     ;gËre l'exception de la lettre M
+         CPA     's',i
+         BREQ    unMotS      ;‡ unMotS si le mot commence par s
+         CPA     'e',i 
+         BREQ    unMotE      ;‡ unMotE si le mot commence par e
+         CPA     'l',i
+         BREQ    unMotL      ;‡ unMotL si le mot commence par l
+         CPA     'p',i
+         BREQ    unMotP      ;‡ unMotS si le mot commence par p
+         CPA     'u',i
+         BREQ    unMotU      ;‡ unMotU si le mot commence par u
+         LDA     cmptLet,d 
+         CPA     0,i
+         BREQ    cmptLet0
+correcte:CHARO   tablFin,x
+         ADDX    2,i
+         LDA     cmptLet,d 
+         CPA     50,i
+         BREQ    space       ;si le nombre de caractËres excËde 50, on doit faire un saut de ligne
+         ADDA    1,i
+         STA     cmptLet,d   ;sinon on incrÈmente le compteur de lettre
+         BR      while4
+
+      
+space:   LDA     0,i
+         STA     cmptLet,d   ;cmptLet=0
+         CHARO   0x000D,i    ;saut de ligne        
+         BR      while4
+finWhil4:CALL    reset,i     ;rÈinitialise les variables    
+         BR      demande	
+
+erreur:  STRO    invalIn,d   ;EntrÈe invalide 
+         CALL    reset,i      
+         BR      demande  
+pasDeLet:STRO    aucune,d    ;aucune lettre n'est utilisÈe
+         CALL    reset,i
+         BR      demande		 
+
+         ;sous programme qui valide une lettre de l'alphabet
+estUneLe:CPA     'A',i
+         BRGE    valideLe 
+         RET0
+valideLe:CPA     'z',i
+         BRLE    vraiLetr 
+         RET0
+vraiLetr: LDA     flagErr,d 
+         ADDA    1,i
+         STA     flagErr,d
+         RET0
+
+         ;sous-programme qui valide une lettre minuscule
+estMin:  CPA     'a',i
+         BRGE    valideA 
+         RET0
+valideA: CPA     'z',i
+         BRLE    correcte 
+         RET0
+
+         ;sous-programme qui gËre les exceptions de la lettre L
+lettreL: CPA     'L',i
+         BREQ    continuL    
+         RET0
+continuL:ADDX    8,i
+         LDBYTEA tablFin,x 
+         SUBX    6,i
+         CPA     ',',i       
+         BREQ    spaceL      ;si le caractËre apres L est une virgule on doit faire un saut de ligne.
+         CHARO   'L',i       ;sinon on imprime L
+         LDA     cmptLet,d 
+         ADDA     1,i
+         STA     cmptLet,d
+         RET0
+spaceL:  CHARO   'L',i       ;imprimer 'L' et ',' et faire un saut de ligne
+         CHARO   ',',i
+         BR      space 
+   
+cmptLet0:LDBYTEA tablFin,x
+         CPA     'A',i
+         BRGE    correcte
+         ADDX    2,i
+         BR      cmptLet0
+
+         ;sous programme qui gËre les exceptions de la lettre M
+lettreM: CPA     'M',i 
+         BREQ    continuM
+         RET0
+continuM:ADDX    2,i
+         LDBYTEA tablFin,x
+         CPA     '"',i
+         BREQ    spaceM
+         ADDX    2,i
+         LDBYTEA tablFin,x
+         CPA     'e',i
+         BREQ    spaceN
+         CHARO   'M',i
+         CHARO   ' ',i
+         RET0
+spaceM:  CHARO   'M',i        
+         LDA     1,i
+         STA     cmptLet,d 
+         BR     while4
+spaceN:  CHARO  'M' ,i
+         BR      space
+
+
+         ;programme qui calcule combien d'espaces il reste avant la fin de ligne au caractËre 50
+         ;si le mot peut Ítre affichÈ sans Ítre coupÈ par le saut de ligne, alors affichage du mot 
+         ;sinon saut de ligne
+
+unMotS:  SUBX    2,i         ;le mot commence par s
+         LDBYTEA  tablFin,x  ;load le caractËre d'avant
+         ADDX    2,i
+         CALL    estMin      ;si le caractËre avant n'est pas une lettre minuscule        
+         LDA     cmptLet,d 
+         CPA     46,i        
+         BRLE    correcte    ;il doit Ítre placÈ avant l'indice 47 de tablFin
+         BR      space       ;sinon on fait un saut de ligne 
+
+unMotE:  SUBX    2,i         ; mÍme principe que unMotS
+         LDBYTEA  tablFin,x 
+         ADDX    2,i
+         CALL    estMin 
+         LDA     cmptLet,d
+         CPA     49,i
+         BRLE    correcte
+         BR      space  
+
+unMotL:  SUBX    2,i         ; mÍme principe que unMotS
+         LDBYTEA  tablFin,x 
+         ADDX    2,i
+         CALL    estMin 
+         LDA     cmptLet,d
+         CPA     48,i
+         BRLE    correcte
+         BR      space 
+
+unMotP:  SUBX    2,i         ; mÍme principe que unMotS
+         LDBYTEA  tablFin,x 
+         ADDX    2,i
+         CALL    estMin 
+         LDA     cmptLet,d
+         CPA     46,i
+         BRLE    correcte
+         BR      space 
+
+unMotU:  SUBX    2,i         ; mÍme principe que unMotS
+         LDBYTEA  tablFin,x 
+         ADDX    2,i
+         CALL    estMin 
+         LDA     cmptLet,d
+         CPA     40,i
+         BRLE    correcte
+         BR      space   
+		 		 
+
+
+         ;sous-programme qui rÈinitialise les variables ‡ 0
+reset:   LDA     0x0000,i    
+         STA     index,d
+         STA     index2,d
+         STA     cmptLet,d 
+         STA     char,d
+         STA     nbrChar,d
+         STA     flagErr,d
+         STA     unique,d
+         STA     cmptX,d
+         STA     cmptFor,d
+         STA     sortie,d
+         LDX     0,i
+         STX     i,d
+while5:  CPX     300,i
+         BREQ    retour4
+         STA     tableau,x
+         STA     table2,x
+         STA     tablFin,x
+         ADDX    2,i
+         BR      while5
+retour4: LDA     0,i
+         STA     i,d
+         RET0
+         
+         ;sous-programme qui ajoute ‡ un tableau les lettres les plus utilisÈes avec une virgule et un espace entre les lettres
+indexPrn:LDA     0,i
+         CPA     index,d     
+         BREQ    printA      ;si index = 0 ‡ printA
+         LDA     2,i
+         CPA     index,d
+         BREQ    printB      ;si index = 2 ‡ printB
+         LDA     4,i
+         CPA     index,d
+         BREQ    printC      ;si index = 4 ‡ printC
+         LDA     6,i
+         CPA     index,d
+         BREQ    printD      ;si index = 6 ‡ printD
+         LDA     8,i
+         CPA     index,d
+         BREQ    printE      ;si index = 8 ‡ printE
+         LDA     10,i
+         CPA     index,d
+         BREQ    printF      ;si index = 10 ‡ printF
+         LDA     12,i
+         CPA     index,d
+         BREQ    printG      ;si index = 12 ‡ printG
+         LDA     14,i
+         CPA     index,d
+         BREQ    printH      ;si index = 14 ‡ printH
+         LDA     16,i
+         CPA     index,d
+         BREQ    printI      ;si index = 16 ‡ printI
+         LDA     18,i
+         CPA     index,d
+         BREQ    printJ      ;si index = 18 ‡ printJ
+         LDA     20,i
+         CPA     index,d
+         BREQ    printK      ;si index = 20 ‡ printK
+         LDA     22,i
+         CPA     index,d
+         BREQ    printL      ;si index = 22 ‡ printL
+         LDA     24,i
+         CPA     index,d
+         BREQ    printM      ;si index = 24 ‡ printM
+         LDA     26,i
+         CPA     index,d
+         BREQ    printN      ;si index = 26 ‡ printN
+         LDA     28,i
+         CPA     index,d
+         BREQ    printO      ;si index = 28 ‡ printO
+         LDA     30,i
+         CPA     index,d
+         BREQ    printP      ;si index = 30 ‡ printP
+         LDA     32,i
+         CPA     index,d
+         BREQ    printQ      ;si index = 32 ‡ printQ
+         LDA     34,i
+         CPA     index,d
+         BREQ    printR      ;si index = 34 ‡ printR
+         LDA     36,i
+         CPA     index,d
+         BREQ    printS      ;si index = 36 ‡ printS
+         LDA     38,i
+         CPA     index,d
+         BREQ    printT      ;si index =38 ‡ printT
+         LDA     40,i
+         CPA     index,d
+         BREQ    printU      ;si index = 40 ‡ printU
+         LDA     42,i
+         CPA     index,d
+         BREQ    printV      ;si index = 42 ‡ printV
+         LDA     44,i
+         CPA     index,d
+         BREQ    printW      ;si index = 44 ‡ printW
+         LDA     46,i
+         CPA     index,d
+         BREQ    printX      ;si index = 46 ‡ printX
+         LDA     48,i
+         CPA     index,d
+         BREQ    printY      ;si index = 48 ‡ printY
+         LDA     50,i
+         CPA     index,d
+         BREQ    printZ      ;si index = 50 ‡ printZ
+printA:  LDX     index2,d
+         LDA     0x0041,i 
+         STBYTEA tablFin,x   ;tablFin[index2] = 'A' 
+         ADDX    2,i
+         LDA     0x002C,i    ;tablFin[index2 +1] = ',' 
+         STBYTEA tablFin,x
+         ADDX    2,i
+         LDA     0x0020,i    ;tablFin[index2 + 1] = ' ' 
+         STBYTEA tablFin,x
+         ADDX    2,i
+         STX     index2,d    ;index2++
+         LDX     index,d
+         RET0   
+printB:  LDX     index2,d
+         LDA     0x0042,i 
+         STBYTEA tablFin,x
+         ADDX    2,i
+         LDA     0x002C,i
+         STBYTEA tablFin,x
+         ADDX    2,i
+         LDA     0x0020,i 
+         STBYTEA tablFin,x
+         ADDX    2,i
+         STX     index2,d
+         LDX     index,d
+         RET0
+printC:  LDX     index2,d
+         LDA     0x0043,i 
+         STBYTEA     tablFin,x
+         ADDX    2,i
+         LDA     0x002C,i
+         STBYTEA     tablFin,x
+         ADDX    2,i
+         LDA     0x0020,i 
+         STBYTEA     tablFin,x
+         ADDX    2,i
+         STX     index2,d
+         LDX     index,d 
+         RET0   
+printD:  LDX     index2,d
+         LDA     0x0044,i 
+         STBYTEA     tablFin,x
+         ADDX    2,i
+         LDA     0x002C,i
+         STBYTEA tablFin,x
+         ADDX    2,i
+         LDA     0x0020,i 
+         STBYTEA     tablFin,x
+         ADDX    2,i
+         STX     index2,d
+         LDX     index,d 
+         RET0   
+printE:  LDX     index2,d
+         LDA     0x0045,i 
+         STBYTEA     tablFin,x
+         ADDX    2,i
+         LDA     0x002C,i
+         STBYTEA tablFin,x
+         ADDX    2,i
+         LDA     0x0020,i 
+         STBYTEA     tablFin,x
+         ADDX    2,i
+         STX     index2,d
+         LDX     index,d 
+         RET0    
+  
+printF:  LDX     index2,d
+         LDA     0x0046,i 
+         STBYTEA     tablFin,x
+         ADDX    2,i
+         LDA     0x002C,i
+         STBYTEA tablFin,x
+         ADDX    2,i
+         LDA     0x0020,i 
+         STBYTEA tablFin,x
+         ADDX    2,i
+         STX     index2,d
+         LDX     index,d 
+         RET0   
+printG:  LDX     index2,d
+         LDA     0x0047,i 
+         STBYTEA     tablFin,x
+         ADDX    2,i
+         LDA     0x002C,i
+         STBYTEA tablFin,x
+         ADDX    2,i
+         LDA     0x0020,i 
+         STBYTEA tablFin,x
+         ADDX    2,i
+         STX     index2,d
+         LDX     index,d 
+         RET0     
+printH:  LDX     index2,d
+         LDA     0x0048,i 
+         STBYTEA tablFin,x
+         ADDX    2,i
+         LDA     0x002C,i
+         STBYTEA tablFin,x
+         ADDX    2,i
+         LDA     0x0020,i 
+         STBYTEA tablFin,x
+         ADDX    2,i
+         STX     index2,d
+         LDX     index,d 
+         RET0   
+printI:  LDX     index2,d
+         LDA     0x0049,i 
+         STBYTEA tablFin,x
+         ADDX    2,i
+         LDA     0x002C,i
+         STBYTEA tablFin,x
+         ADDX    2,i
+         LDA     0x0020,i 
+         STBYTEA tablFin,x
+         ADDX    2,i
+         STX     index2,d
+         LDX     index,d 
+         RET0      
+printJ:  LDX     index2,d
+         LDA     0x004A,i 
+         STBYTEA tablFin,x
+         ADDX    2,i
+         LDA     0x002C,i
+         STBYTEA tablFin,x
+         ADDX    2,i
+         LDA     0x0020,i 
+         STBYTEA tablFin,x
+         ADDX    2,i
+         STX     index2,d
+         LDX     index,d 
+         RET0
+printK:  LDX     index2,d
+         LDA     0x004B,i 
+         STBYTEA tablFin,x
+         ADDX    2,i
+         LDA     0x002C,i
+         STBYTEA tablFin,x
+         ADDX    2,i
+         LDA     0x0020,i 
+         STBYTEA tablFin,x
+         ADDX    2,i
+         STX     index2,d
+         LDX     index,d 
+         RET0  
+printL:  LDX     index2,d
+         LDA     0x004C,i 
+         STBYTEA tablFin,x
+         ADDX    2,i
+         LDA     0x002C,i
+         STBYTEA tablFin,x
+         ADDX    2,i
+         LDA     0x0020,i 
+         STBYTEA tablFin,x
+         ADDX    2,i
+         STX     index2,d
+         LDX     index,d 
+         RET0
+printM:  LDX     index2,d
+         LDA     0x004D,i 
+         STBYTEA tablFin,x
+         ADDX    2,i
+         LDA     0x002C,i
+         STBYTEA tablFin,x
+         ADDX    2,i
+         LDA     0x0020,i 
+         STBYTEA tablFin,x
+         ADDX    2,i
+         STX     index2,d
+         LDX     index,d 
+         RET0  
+printN:  LDX     index2,d
+         LDA     0x004E,i 
+         STBYTEA tablFin,x
+         ADDX    2,i
+         LDA     0x002C,i
+         STBYTEA tablFin,x
+         ADDX    2,i
+         LDA     0x0020,i 
+         STBYTEA tablFin,x
+         ADDX    2,i
+         STX     index2,d
+         LDX     index,d 
+         RET0
+printO:  LDX     index2,d
+         LDA     0x004F,i 
+         STBYTEA tablFin,x
+         ADDX    2,i
+         LDA     0x002C,i
+         STBYTEA tablFin,x
+         ADDX    2,i
+         LDA     0x0020,i 
+         STBYTEA tablFin,x
+         ADDX    2,i
+         STX     index2,d
+         LDX     index,d 
+         RET0
+printP:  LDX     index2,d
+         LDA     0x0050,i 
+         STBYTEA tablFin,x
+         ADDX    2,i
+         LDA     0x002C,i
+         STBYTEA tablFin,x
+         ADDX    2,i
+         LDA     0x0020,i 
+         STBYTEA tablFin,x
+         ADDX    2,i
+         STX     index2,d
+         LDX     index,d 
+         RET0
+printQ:  LDX     index2,d
+         LDA     0x0051,i 
+         STBYTEA tablFin,x
+         ADDX    2,i
+         LDA     0x002C,i
+         STBYTEA tablFin,x
+         ADDX    2,i
+         LDA     0x0020,i 
+         STBYTEA tablFin,x
+         ADDX    2,i
+         STX     index2,d
+         LDX     index,d 
+         RET0  
+printR:  LDX     index2,d
+         LDA     0x0052,i 
+         STBYTEA tablFin,x
+         ADDX    2,i
+         LDA     0x002C,i
+         STBYTEA tablFin,x
+         ADDX    2,i
+         LDA     0x0020,i 
+         STBYTEA tablFin,x
+         ADDX    2,i
+         STX     index2,d
+         LDX     index,d 
+         RET0
+printS:  LDX     index2,d
+         LDA     0x0053,i 
+         STBYTEA tablFin,x
+         ADDX    2,i
+         LDA     0x002C,i
+         STBYTEA tablFin,x
+         ADDX    2,i
+         LDA     0x0020,i 
+         STBYTEA tablFin,x
+         ADDX    2,i
+         STX     index2,d
+         LDX     index,d 
+         RET0  
+printT:  LDX     index2,d
+         LDA     0x0054,i 
+         STBYTEA tablFin,x
+         ADDX    2,i
+         LDA     0x002C,i
+         STBYTEA tablFin,x
+         ADDX    2,i
+         LDA     0x0020,i 
+         STBYTEA tablFin,x
+         ADDX    2,i
+         STX     index2,d
+         LDX     index,d 
+         RET0
+printU:  LDX     index2,d
+         LDA     0x0055,i 
+         STBYTEA tablFin,x
+         ADDX    2,i
+         LDA     0x002C,i
+         STBYTEA tablFin,x
+         ADDX    2,i
+         LDA     0x0020,i 
+         STBYTEA tablFin,x
+         ADDX    2,i
+         STX     index2,d
+         LDX     index,d 
+         RET0 
+printV:  LDX     index2,d
+         LDA     0x0056,i 
+         STBYTEA tablFin,x
+         ADDX    2,i
+         LDA     0x002C,i
+         STBYTEA tablFin,x
+         ADDX    2,i
+         LDA     0x0020,i 
+         STBYTEA tablFin,x
+         ADDX    2,i
+         STX     index2,d
+         LDX     index,d 
+         RET0
+printW:  LDX     index2,d
+         LDA     0x0057,i 
+         STBYTEA tablFin,x
+         ADDX    2,i
+         LDA     0x002C,i
+         STBYTEA tablFin,x
+         ADDX    2,i
+         LDA     0x0020,i 
+         STBYTEA tablFin,x
+         ADDX    2,i
+         STX     index2,d
+         LDX     index,d 
+         RET0  
+printX:  LDX     index2,d
+         LDA     0x0058,i 
+         STBYTEA tablFin,x
+         ADDX    2,i
+         LDA     0x002C,i
+         STBYTEA tablFin,x
+         ADDX    2,i
+         LDA     0x0020,i 
+         STBYTEA tablFin,x
+         ADDX    2,i
+         STX     index2,d
+         LDX     index,d 
+         RET0
+printY:  LDX     index2,d
+         LDA     0x0059,i 
+         STBYTEA tablFin,x
+         ADDX    2,i
+         LDA     0x002C,i
+         STBYTEA tablFin,x
+         ADDX    2,i
+         LDA     0x0020,i 
+         STBYTEA tablFin,x
+         ADDX    2,i
+         STX     index2,d
+         LDX     index,d 
+         RET0 
+printZ:  LDX     index2,d
+         LDA     0x005A,i 
+         STBYTEA tablFin,x
+         ADDX    2,i
+         LDA     0x002C,i
+         STBYTEA tablFin,x
+         ADDX    2,i
+         LDA     0x0020,i 
+         STBYTEA tablFin,x
+         ADDX    2,i
+         STX     index2,d
+         LDX     index,d 
+         RET0
+  
+fin:     STRO    normale,d
+         STOP
+
+		;sous-programme qui insËre "Les lettres  \"" dans le tableau final
+tabFin:  LDX     0,i
+         LDA     'L',i
+         STBYTEA tablFin,x 
+         ADDX    2,i
+         LDA     'e',i
+         STBYTEA tablFin,x
+         ADDX    2,i
+         LDA     's',i
+         STBYTEA     tablFin,x 
+         ADDX    2,i
+         LDA     ' ',i
+         STBYTEA     tablFin,x
+         ADDX    2,i
+         LDA     'l',i
+         STBYTEA     tablFin,x
+         ADDX    2,i
+         LDA     'e',i
+         STBYTEA     tablFin,x 
+         ADDX    2,i
+         LDA     't',i
+         STBYTEA     tablFin,x
+         ADDX    2,i 
+         LDA     't',i
+         STBYTEA     tablFin,x 
+         ADDX    2,i
+         LDA     'r',i
+         STBYTEA     tablFin,x
+         ADDX    2,i
+         LDA     'e',i
+         STBYTEA     tablFin,x 
+         ADDX    2,i
+         LDA     's',i
+         STBYTEA     tablFin,x
+         ADDX    2,i
+         LDA     ' ',i
+         STBYTEA     tablFin,x
+         ADDX    2,i
+         LDA     0x0022,i
+         STBYTEA     tablFin,x
+         ADDX    2,i
+         STX     index2,d
+         RET0
+		
+		; programme qui calcule le nombre de chacunes des lettres d'une phrase
+                       ; ajoute un ‡ l'indice de la lettre dans un tableau (A=0, B=2,C=4... Z=52)           
+metEnTab:CPA     0x0041,i
+         BREQ    a           ;if tableau[i] = A
+         CPA     0x0042,i
+         BREQ    b           ;if tableau[i] = B
+         CPA     0x0043,i
+         BREQ    c           ;if tableau[i] = C
+         CPA     0x0044,i
+         BREQ    d           ;if tableau[i] = D
+         CPA     0x0045,i
+         BREQ    e           ;if tableau[i] = E
+         CPA     0x0046,i
+         BREQ    f           ;if tableau[i] = F
+         CPA     0x0047,i
+         BREQ    g           ;if tableau[i] = G
+         CPA     0x0048,i
+         BREQ    h           ;if tableau[i] = H
+         CPA     0x0049,i
+         BREQ    ii           ;if tableau[i] = I
+         CPA     0x004A,i
+         BREQ    jj           ;if tableau[i] = J
+         CPA     0x004B,i
+         BREQ    k           ;if tableau[i] = K
+         CPA     0x004C,i
+         BREQ    l           ;if tableau[i] = L
+         CPA     0x004D,i
+         BREQ    m           ;if tableau[i] = M
+         CPA     0x004E,i
+         BREQ    n           ;if tableau[i] = M
+         CPA     0x004F,i
+         BREQ    o           ;if tableau[i] = O
+         CPA     0x0050,i
+         BREQ    p           ;if tableau[i] = P
+         CPA     0x0051,i
+         BREQ    q           ;if tableau[i] = Q
+         CPA     0x0052,i
+         BREQ    r           ;if tableau[i] = R
+         CPA     0x0053,i
+         BREQ    s           ;if tableau[i] = S
+         CPA     0x0054,i
+         BREQ    t           ;if tableau[i] = T
+         CPA     0x0055,i
+         BREQ    u           ;if tableau[i] = U
+         CPA     0x0056,i
+         BREQ    v          ;if tableau[i] = V
+         CPA     0x0057,i
+         BREQ    w            ;if tableau[i] = W
+         CPA     0x0058,i
+         BREQ    x           ;if tableau[i] = X
+         CPA     0x0059,i
+         BREQ    y           ;if tableau[i] = Y
+         CPA     0x005A,i
+         BREQ    z           ;if tableau[i] = Z
+         LDA     i,d
+         ADDA    2,i
+         STA     i,d
+         BR     while2      ;else to while3
+
+a:       LDX     0,i
+         LDA     table2,x
+         ADDA    1,i
+         STA     table2,x    ;table2[i]++
+         LDX     i,d
+         ADDX    2,i
+         STX     i,d         ;i++ 
+         BR      while2
+
+b:       LDX     2,i
+         LDA     table2,x
+         ADDA    1,i
+         STA     table2,x    ;table2[i]++ 
+         LDX     i,d
+         ADDX    2,i
+         STX     i,d         ;i++ 
+         BR      while2  
+
+c:       LDX     4,i
+         LDA     table2,x
+         ADDA    1,i
+         STA     table2,x    ;table2[i]++ 
+         LDX     i,d
+         ADDX    2,i
+         STX     i,d         ;j++ 
+         BR      while2
+
+d:       LDX     6,i
+         LDA     table2,x
+         ADDA    1,i
+         STA     table2,x    ;table2[i]++ 
+         LDX     i,d
+         ADDX    2,i
+         STX     i,d         ;i++
+         BR      while2
+
+e:       LDX     8,i
+         LDA     table2,x
+         ADDA    1,i
+         STA     table2,x    ;table2[i]++ 
+         LDX     i,d
+         ADDX    2,i
+         STX     i,d         ;i++
+         BR      while2
+
+f:       LDX     10,i
+         LDA     table2,x
+         ADDA    1,i
+         STA     table2,x    ;table2[i]++ 
+         LDX      i,d
+         ADDX    2,i
+         STX     i,d         ;i++
+         BR      while2  
+
+g:       LDX     12,i
+         LDA     table2,x
+         ADDA    1,i
+         STA     table2,x    ;table2[i]++ 
+         LDX      i,d
+         ADDX    2,i
+         STX     i,d         ;i++
+         BR      while2
+
+h:       LDX     14,i
+         LDA     table2,x
+         ADDA    1,i
+         STA     table2,x    ;table2[i]++ 
+         LDX      i,d
+         ADDX    2,i
+         STX     i,d         ;i++
+         BR      while2 
+
+ii:      LDX     16,i
+         LDA     table2,x
+         ADDA    1,i
+         STA     table2,x    ;table2[i]++ 
+         LDX      i,d
+         ADDX    2,i
+         STX     i,d         ;i++
+         BR      while2
+
+jj:      LDX     18,i
+         LDA     table2,x
+         ADDA    1,i
+         STA     table2,x    ;table2[i]++
+         LDX      i,d
+         ADDX    2,i
+         STX     i,d         ;i++
+         BR      while2  
+
+k:       LDX     20,i
+         LDA     table2,x
+         ADDA    1,i
+         STA     table2,x    ;table2[i]++ 
+         LDX      i,d
+         ADDX    2,i
+         STX     i,d         ;i++
+         BR      while2
+
+l:       LDX     22,i
+         LDA     table2,x
+         ADDA    1,i
+         STA     table2,x    ;table2[i]++
+         LDX      i,d
+         ADDX    2,i
+         STX     i,d         ;i++
+         BR      while2 
+
+m:       LDX     24,i
+         LDA     table2,x
+         ADDA    1,i
+         STA     table2,x    ;table2[i]++
+         LDX      i,d
+         ADDX    2,i
+         STX     i,d         ;i++
+         BR      while2 
+
+n:       LDX     26,i
+         LDA     table2,x
+         ADDA    1,i
+         STA     table2,x    ;table2[i]++
+         LDX      i,d
+         ADDX    2,i
+         STX     i,d         ;i++
+         BR      while2
+
+o:       LDX     28,i
+         LDA     table2,x
+         ADDA    1,i
+         STA     table2,x    ;table2[i]++ 
+         LDX      i,d
+         ADDX    2,i
+         STX     i,d         ;i++
+         BR      while2 
+ 
+
+p:       LDX     30,i
+         LDA     table2,x
+         ADDA    1,i
+         STA     table2,x    ;table2[i]++ 
+         LDX      i,d
+         ADDX    2,i
+         STX     i,d         ;i++
+         BR      while2
+
+q:       LDX     32,i
+         LDA     table2,x
+         ADDA    1,i
+         STA     table2,x    ;table2[i]++ 
+         LDX      i,d
+         ADDX    2,i
+         STX     i,d         ;i++
+         BR      while2
+
+r:       LDX     34,i
+         LDA     table2,x
+         ADDA    1,i
+         STA     table2,x    ;table2[i]++ 
+         LDX      i,d
+         ADDX    2,i
+         STX     i,d         ;i++
+         BR      while2  
+
+s:       LDX     36,i
+         LDA     table2,x
+         ADDA    1,i
+         STA     table2,x    ;table2[i]++
+         LDX      i,d
+         ADDX    2,i
+         STX     i,d         ;i++
+         BR      while2 
+
+t:       LDX     38,i
+         LDA     table2,x
+         ADDA    1,i
+         STA     table2,x    ;table2[i]++ 
+         LDX      i,d
+         ADDX    2,i
+         STX     i,d         ;i++
+         BR      while2
+
+u:       LDX     40,i
+         LDA     table2,x
+         ADDA    1,i
+         STA     table2,x    ;table2[i]++ 
+         LDX      i,d
+         ADDX    2,i
+         STX     i,d         ;i++
+         BR      while2
+
+v:       LDX     42,i
+         LDA     table2,x
+         ADDA    1,i
+         STA     table2,x    ;table2[i]++  
+         LDX      i,d
+         ADDX    2,i
+         STX     i,d         ;i++
+         BR      while2 
+ 
+w:       LDX     44,i
+         LDA     table2,x
+         ADDA    1,i
+         STA     table2,x    ;table2[i]++ 
+         LDX      i,d
+         ADDX    2,i
+         STX     i,d         ;i++
+         BR      while2
+
+x:       LDX     46,i
+         LDA     table2,x
+         ADDA    1,i
+         STA     table2,x    ;table2[i]++
+         LDX     i,d
+         ADDX    2,i
+         STX     i,d         ;i++
+         BR      while2
+
+y:       LDX     48,i
+         LDA     table2,x
+         ADDA    1,i
+         STA     table2,x    ;table2[i]++ 
+         LDX      i,d
+         ADDX    2,i
+         STX     i,d         ;i++
+         BR      while2
+
+z:       LDX     50,i
+         LDA     table2,x
+         ADDA    1,i
+         STA     table2,x    ;table2[i]++
+         LDX      i,d
+         ADDX    2,i
+         STX     i,d         ;i++
+         BR      while2  
+             
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;                            ;;
+;;       VARIABLES            ;;
+;;                            ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+              
+bienvenu:.ASCII  "Bienvenue dans le programme LETTRE qui analyse les charËres d'une chaÓne.\x00"
+solicite:.ASCII  "\n\nEntrez un mot ou une phrase, [ENTER] pour sortir : \n\n\x00"
+normale: .ASCII  "Fin normale du programme.\x00"
+invalIn: .ASCII  "EntrÈe invalide.\x00"
+la:      .ASCII  "La lettre \x00"
+est:     .ASCII  " est la plus utilisÈe.\x00"
+aucune:  .ASCII  "Aucune lettre n'a ÈtÈ utilisÈe.\x00"
+tablFin: .BLOCK  300         ;#2h150a
+tableau: .BLOCK  82          ;#2d41a    
+table2:  .BLOCK  52          ;#2d26a
+cmptX:   .BLOCK  2           ;#2d
+cmptFor: .BLOCK  2           ;#2d
+cmptLet: .BLOCK  2           ;#2d
+index:   .BLOCK  2           ;#2d
+index2:  .BLOCK  2           ;#2d
+i:       .BLOCK  2	      ;#2d 
+nbrChar: .BLOCK  2           ;#2d
+char:    .BLOCK  2           ;#2d
+unique:  .BLOCK  2           ;#2d
+sortie:  .BLOCK  2           ;#2d
+flagErr: .BLOCK  2           ;#2d
+char2:   .BLOCK  1           ;#1h 
+
+;
+;	liste des 256 charËres ASCII
+;
+chaine:  .ASCII  " "         ; ""(ascii) 00(hex) 0(dec)
+         .ASCII  " "         ; ""(ascii) 01(hex) 1(dec)
+         .ASCII  " "         ; ""(ascii) 02(hex) 2(dec)
+         .ASCII  " "         ; ""(ascii) 03(hex) 3(dec)
+         .ASCII  " "         ; ""(ascii) 04(hex) 4(dec)
+         .ASCII  " "         ; ""(ascii) 05(hex) 5(dec)
+         .ASCII  " "         ; ""(ascii) 06(hex) 6(dec)
+         .ASCII  " "         ; ""(ascii) 07(hex) 7(dec)
+         .ASCII  " "         ; ""(ascii) 08(hex) 8(dec)
+         .ASCII  " "         ; " "(ascii) 09(hex) 9(dec)
+         .ASCII  " "         ; " "(ascii) 0A(hex) 10(dec)
+         .ASCII  " "         ; ""(ascii) 0B(hex) 11(dec)
+         .ASCII  " "         ; ""(ascii) 0C(hex) 12(dec)
+         .ASCII  " "         ; " "(ascii) 0D(hex) 13(dec)
+         .ASCII  " "         ; ""(ascii) 0E(hex) 14(dec)
+         .ASCII  " "         ; ""(ascii) 0F(hex) 15(dec)
+         .ASCII  " "         ; ""(ascii) 10(hex) 16(dec)
+         .ASCII  " "         ; ""(ascii) 11(hex) 17(dec)
+         .ASCII  " "         ; ""(ascii) 12(hex) 18(dec)
+         .ASCII  " "         ; ""(ascii) 13(hex) 19(dec)
+         .ASCII  " "         ; ""(ascii) 14(hex) 20(dec)
+         .ASCII  " "         ; ""(ascii) 15(hex) 21(dec)
+         .ASCII  " "         ; ""(ascii) 16(hex) 22(dec)
+         .ASCII  " "         ; ""(ascii) 17(hex) 23(dec)
+         .ASCII  " "         ; ""(ascii) 18(hex) 24(dec)
+         .ASCII  " "         ; ""(ascii) 19(hex) 25(dec)
+         .ASCII  " "         ; ""(ascii) 1A(hex) 26(dec)
+         .ASCII  " "         ; ""(ascii) 1B(hex) 27(dec)
+         .ASCII  " "         ; ""(ascii) 1C(hex) 28(dec)
+         .ASCII  " "         ; ""(ascii) 1D(hex) 29(dec)
+         .ASCII  " "         ; ""(ascii) 1E(hex) 30(dec)
+         .ASCII  " "         ; ""(ascii) 1F(hex) 31(dec)
+         .ASCII  " "         ; " "(ascii) 20(hex) 32(dec)
+         .ASCII  " "         ; "!"(ascii) 21(hex) 33(dec)
+         .ASCII  " "         ; " "(ascii) 22(hex) 34(dec)
+         .ASCII  " "         ; "#"(ascii) 23(hex) 35(dec)
+         .ASCII  " "         ; "$"(ascii) 24(hex) 36(dec)
+         .ASCII  " "         ; "%"(ascii) 25(hex) 37(dec)
+         .ASCII  " "         ; "&"(ascii) 26(hex) 38(dec)
+         .ASCII  " "         ; "'"(ascii) 27(hex) 39(dec)
+         .ASCII  " "         ; "("(ascii) 28(hex) 40(dec)
+         .ASCII  " "         ; ")"(ascii) 29(hex) 41(dec)
+         .ASCII  " "         ; "*"(ascii) 2A(hex) 42(dec)
+         .ASCII  " "         ; "+"(ascii) 2B(hex) 43(dec)
+         .ASCII  " "         ; ","(ascii) 2C(hex) 44(dec)
+         .ASCII  " "         ; "-"(ascii) 2D(hex) 45(dec)
+         .ASCII  " "         ; "."(ascii) 2E(hex) 46(dec)
+         .ASCII  " "         ; "/"(ascii) 2F(hex) 47(dec)
+         .ASCII  " "         ; "0"(ascii) 30(hex) 48(dec)
+         .ASCII  " "         ; "1"(ascii) 31(hex) 49(dec)
+         .ASCII  " "         ; "2"(ascii) 32(hex) 50(dec)
+         .ASCII  " "         ; "3"(ascii) 33(hex) 51(dec)
+         .ASCII  " "         ; "4"(ascii) 34(hex) 52(dec)
+         .ASCII  " "         ; "5"(ascii) 35(hex) 53(dec)
+         .ASCII  " "         ; "6"(ascii) 36(hex) 54(dec)
+         .ASCII  " "         ; "7"(ascii) 37(hex) 55(dec)
+         .ASCII  " "         ; "8"(ascii) 38(hex) 56(dec)
+         .ASCII  " "         ; "9"(ascii) 39(hex) 57(dec)
+         .ASCII  " "         ; ":"(ascii) 3A(hex) 58(dec)
+         .ASCII  " "         ; ";"(ascii) 3B(hex) 59(dec)
+         .ASCII  " "         ; "<"(ascii) 3C(hex) 60(dec)
+         .ASCII  " "         ; "="(ascii) 3D(hex) 61(dec)
+         .ASCII  " "         ; ">"(ascii) 3E(hex) 62(dec)
+         .ASCII  " "         ; "?"(ascii) 3F(hex) 63(dec)
+         .ASCII  " "         ; "@"(ascii) 40(hex) 64(dec)
+         .ASCII  "A"         ; "A"(ascii) 41(hex) 65(dec)
+         .ASCII  "B"         ; "B"(ascii) 42(hex) 66(dec)
+         .ASCII  "C"         ; "C"(ascii) 43(hex) 67(dec)
+         .ASCII  "D"         ; "D"(ascii) 44(hex) 68(dec)
+         .ASCII  "E"         ; "E"(ascii) 45(hex) 69(dec)
+         .ASCII  "F"         ; "F"(ascii) 46(hex) 70(dec)
+         .ASCII  "G"         ; "G"(ascii) 47(hex) 71(dec)
+         .ASCII  "H"         ; "H"(ascii) 48(hex) 72(dec)
+         .ASCII  "I"         ; "I"(ascii) 49(hex) 73(dec)
+         .ASCII  "J"         ; "J"(ascii) 4A(hex) 74(dec)
+         .ASCII  "K"         ; "K"(ascii) 4B(hex) 75(dec)
+         .ASCII  "L"         ; "L"(ascii) 4C(hex) 76(dec)
+         .ASCII  "M"         ; "M"(ascii) 4D(hex) 77(dec)
+         .ASCII  "N"         ; "N"(ascii) 4E(hex) 78(dec)
+         .ASCII  "O"         ; "O"(ascii) 4F(hex) 79(dec)
+         .ASCII  "P"         ; "P"(ascii) 50(hex) 80(dec)
+         .ASCII  "Q"         ; "Q"(ascii) 51(hex) 81(dec)
+         .ASCII  "R"         ; "R"(ascii) 52(hex) 82(dec)
+         .ASCII  "S"         ; "S"(ascii) 53(hex) 83(dec)
+         .ASCII  "T"         ; "T"(ascii) 54(hex) 84(dec)
+         .ASCII  "U"         ; "U"(ascii) 55(hex) 85(dec)
+         .ASCII  "V"         ; "V"(ascii) 56(hex) 86(dec)
+         .ASCII  "W"         ; "W"(ascii) 57(hex) 87(dec)
+         .ASCII  "X"         ; "X"(ascii) 58(hex) 88(dec)
+         .ASCII  "Y"         ; "Y"(ascii) 59(hex) 89(dec)
+         .ASCII  "Z"         ; "Z"(ascii) 5A(hex) 90(dec)
+         .ASCII  " "         ; "["(ascii) 5B(hex) 91(dec)
+         .ASCII  " "         ; " "(ascii) 5C(hex) 92(dec)
+         .ASCII  " "         ; "]"(ascii) 5D(hex) 93(dec)
+         .ASCII  " "         ; "^"(ascii) 5E(hex) 94(dec)
+         .ASCII  " "         ; "_"(ascii) 5F(hex) 95(dec)
+         .ASCII  " "         ; "`"(ascii) 60(hex) 96(dec)
+         .ASCII  "A"         ; "a"(ascii) 61(hex) 97(dec)
+         .ASCII  "B"         ; "b"(ascii) 62(hex) 98(dec)
+         .ASCII  "C"         ; "c"(ascii) 63(hex) 99(dec)
+         .ASCII  "D"         ; "d"(ascii) 64(hex) 100(dec)
+         .ASCII  "E"         ; "e"(ascii) 65(hex) 101(dec)
+         .ASCII  "F"         ; "f"(ascii) 66(hex) 102(dec)
+         .ASCII  "G"         ; "g"(ascii) 67(hex) 103(dec)
+         .ASCII  "H"         ; "h"(ascii) 68(hex) 104(dec)
+         .ASCII  "I"         ; "i"(ascii) 69(hex) 105(dec)
+         .ASCII  "J"         ; "j"(ascii) 6A(hex) 106(dec)
+         .ASCII  "K"         ; "k"(ascii) 6B(hex) 107(dec)
+         .ASCII  "L"         ; "l"(ascii) 6C(hex) 108(dec)
+         .ASCII  "M"         ; "m"(ascii) 6D(hex) 109(dec)
+         .ASCII  "N"         ; "n"(ascii) 6E(hex) 110(dec)
+         .ASCII  "O"         ; "o"(ascii) 6F(hex) 111(dec)
+         .ASCII  "P"         ; "p"(ascii) 70(hex) 112(dec)
+         .ASCII  "Q"         ; "q"(ascii) 71(hex) 113(dec)
+         .ASCII  "R"         ; "r"(ascii) 72(hex) 114(dec)
+         .ASCII  "S"         ; "s"(ascii) 73(hex) 115(dec)
+         .ASCII  "T"         ; "t"(ascii) 74(hex) 116(dec)
+         .ASCII  "U"         ; "u"(ascii) 75(hex) 117(dec)
+         .ASCII  "V"         ; "v"(ascii) 76(hex) 118(dec)
+         .ASCII  "W"         ; "w"(ascii) 77(hex) 119(dec)
+         .ASCII  "X"         ; "x"(ascii) 78(hex) 120(dec)
+         .ASCII  "Y"         ; "y"(ascii) 79(hex) 121(dec)
+         .ASCII  "Z"         ; "z"(ascii) 7A(hex) 122(dec)
+         .ASCII  " "         ; "{"(ascii) 7B(hex) 123(dec)
+         .ASCII  " "         ; " "(ascii) 7C(hex) 124(dec)
+         .ASCII  " "         ; "}"(ascii) 7D(hex) 125(dec)
+         .ASCII  " "         ; "~"(ascii) 7E(hex) 126(dec)
+         .ASCII  " "         ; ""(ascii) 7F(hex) 127(dec)
+         .ASCII  " "         ; "?"(ascii) 80(hex) 128(dec)
+         .ASCII  " "         ; "Å"(ascii) 81(hex) 129(dec)
+         .ASCII  " "         ; "?"(ascii) 82(hex) 130(dec)
+         .ASCII  " "         ; "?"(ascii) 83(hex) 131(dec)
+         .ASCII  " "         ; "?"(ascii) 84(hex) 132(dec)
+         .ASCII  " "         ; "?"(ascii) 85(hex) 133(dec)
+         .ASCII  " "         ; "?"(ascii) 86(hex) 134(dec)
+         .ASCII  " "         ; "?"(ascii) 87(hex) 135(dec)
+         .ASCII  " "         ; "?"(ascii) 88(hex) 136(dec)
+         .ASCII  " "         ; "?"(ascii) 89(hex) 137(dec)
+         .ASCII  " "         ; "?"(ascii) 8A(hex) 138(dec)
+         .ASCII  " "         ; "?"(ascii) 8B(hex) 139(dec)
+         .ASCII  " "         ; "?"(ascii) 8C(hex) 140(dec)
+         .ASCII  " "         ; "ç"(ascii) 8D(hex) 141(dec)
+         .ASCII  " "         ; "?"(ascii) 8E(hex) 142(dec)
+         .ASCII  " "         ; "è"(ascii) 8F(hex) 143(dec)
+         .ASCII  " "         ; "ê"(ascii) 90(hex) 144(dec)
+         .ASCII  " "         ; "?"(ascii) 91(hex) 145(dec)
+         .ASCII  " "         ; "?"(ascii) 92(hex) 146(dec)
+         .ASCII  " "         ; "?"(ascii) 93(hex) 147(dec)
+         .ASCII  " "         ; "?"(ascii) 94(hex) 148(dec)
+         .ASCII  " "         ; "?"(ascii) 95(hex) 149(dec)
+         .ASCII  " "         ; "?"(ascii) 96(hex) 150(dec)
+         .ASCII  " "         ; "?"(ascii) 97(hex) 151(dec)
+         .ASCII  " "         ; "?"(ascii) 98(hex) 152(dec)
+         .ASCII  " "         ; "?"(ascii) 99(hex) 153(dec)
+         .ASCII  " "         ; "?"(ascii) 9A(hex) 154(dec)
+         .ASCII  " "         ; "?"(ascii) 9B(hex) 155(dec)
+         .ASCII  " "         ; "?"(ascii) 9C(hex) 156(dec)
+         .ASCII  " "         ; "ù"(ascii) 9D(hex) 157(dec)
+         .ASCII  " "         ; "?"(ascii) 9E(hex) 158(dec)
+         .ASCII  " "         ; "?"(ascii) 9F(hex) 159(dec)
+         .ASCII  " "         ; " "(ascii) A0(hex) 160(dec)
+         .ASCII  " "         ; "°"(ascii) A1(hex) 161(dec)
+         .ASCII  " "         ; "¢"(ascii) A2(hex) 162(dec)
+         .ASCII  " "         ; "£"(ascii) A3(hex) 163(dec)
+         .ASCII  " "         ; "§"(ascii) A4(hex) 164(dec)
+         .ASCII  " "         ; "•"(ascii) A5(hex) 165(dec)
+         .ASCII  " "         ; "¶"(ascii) A6(hex) 166(dec)
+         .ASCII  " "         ; "ß"(ascii) A7(hex) 167(dec)
+         .ASCII  " "         ; "®"(ascii) A8(hex) 168(dec)
+         .ASCII  " "         ; "©"(ascii) A9(hex) 169(dec)
+         .ASCII  " "         ; "™"(ascii) AA(hex) 170(dec)
+         .ASCII  " "         ; "´"(ascii) AB(hex) 171(dec)
+         .ASCII  " "         ; "¨"(ascii) AC(hex) 172(dec)
+         .ASCII  " "         ; " ≠"(ascii) AD(hex) 173(dec)
+         .ASCII  " "         ; "Æ"(ascii) AE(hex) 174(dec)
+         .ASCII  " "         ; "Ø"(ascii) AF(hex) 175(dec)
+         .ASCII  " "         ; "∞"(ascii) B0(hex) 176(dec)
+         .ASCII  " "         ; "±"(ascii) B1(hex) 177(dec)
+         .ASCII  " "         ; "≤"(ascii) B2(hex) 178(dec)
+         .ASCII  " "         ; "≥"(ascii) B3(hex) 179(dec)
+         .ASCII  " "         ; "¥"(ascii) B4(hex) 180(dec)
+         .ASCII  " "         ; "µ"(ascii) B5(hex) 181(dec)
+         .ASCII  " "         ; "∂"(ascii) B6(hex) 182(dec)
+         .ASCII  " "         ; "∑"(ascii) B7(hex) 183(dec)
+         .ASCII  " "         ; "∏"(ascii) B8(hex) 184(dec)
+         .ASCII  " "         ; "π"(ascii) B9(hex) 185(dec)
+         .ASCII  " "         ; "∫"(ascii) BA(hex) 186(dec)
+         .ASCII  " "         ; "ª"(ascii) BB(hex) 187(dec)
+         .ASCII  " "         ; "º"(ascii) BC(hex) 188(dec)
+         .ASCII  " "         ; "Ω"(ascii) BD(hex) 189(dec)
+         .ASCII  " "         ; "æ"(ascii) BE(hex) 190(dec)
+         .ASCII  " "         ; "ø"(ascii) BF(hex) 191(dec)
+         .ASCII  "A"         ; "¿"(ascii) C0(hex) 192(dec)
+         .ASCII  "A"         ; "¡"(ascii) C1(hex) 193(dec)
+         .ASCII  "A"         ; "¬"(ascii) C2(hex) 194(dec)
+         .ASCII  "A"         ; "√"(ascii) C3(hex) 195(dec)
+         .ASCII  "A"         ; "ƒ"(ascii) C4(hex) 196(dec)
+         .ASCII  "A"         ; "≈"(ascii) C5(hex) 197(dec)
+         .ASCII  "A"         ; "∆"(ascii) C6(hex) 198(dec)
+         .ASCII  "C"         ; "«"(ascii) C7(hex) 199(dec)
+         .ASCII  "E"         ; "»"(ascii) C8(hex) 200(dec)
+         .ASCII  "E"         ; "…"(ascii) C9(hex) 201(dec)
+         .ASCII  "E"         ; " "(ascii) CA(hex) 202(dec)
+         .ASCII  "E"         ; "À"(ascii) CB(hex) 203(dec)
+         .ASCII  "I"         ; "Ã"(ascii) CC(hex) 204(dec)
+         .ASCII  "I"         ; "Õ"(ascii) CD(hex) 205(dec)
+         .ASCII  "I"         ; "Œ"(ascii) CE(hex) 206(dec)
+         .ASCII  "I"         ; "œ"(ascii) CF(hex) 207(dec)
+         .ASCII  "D"         ; "–"(ascii) D0(hex) 208(dec)
+         .ASCII  "N"         ; "—"(ascii) D1(hex) 209(dec)
+         .ASCII  "O"         ; "“"(ascii) D2(hex) 210(dec)
+         .ASCII  "O"         ; "”"(ascii) D3(hex) 211(dec)
+         .ASCII  "O"         ; "‘"(ascii) D4(hex) 212(dec)
+         .ASCII  "O"         ; "’"(ascii) D5(hex) 213(dec)
+         .ASCII  "O"         ; "÷"(ascii) D6(hex) 214(dec)
+         .ASCII  " "         ; "◊"(ascii) D7(hex) 215(dec)
+         .ASCII  "O"         ; "ÿ"(ascii) D8(hex) 216(dec)
+         .ASCII  "U"         ; "Ÿ"(ascii) D9(hex) 217(dec)
+         .ASCII  "U"         ; "⁄"(ascii) DA(hex) 218(dec)
+         .ASCII  "U"         ; "€"(ascii) DB(hex) 219(dec)
+         .ASCII  "U"         ; "‹"(ascii) DC(hex) 220(dec)
+         .ASCII  "Y"         ; "›"(ascii) DD(hex) 221(dec)
+         .ASCII  " "         ; "ﬁ"(ascii) DE(hex) 222(dec)
+         .ASCII  " "         ; "ﬂ"(ascii) DF(hex) 223(dec)
+         .ASCII  "A"         ; "‡"(ascii) E0(hex) 224(dec)
+         .ASCII  "A"         ; "·"(ascii) E1(hex) 225(dec)
+         .ASCII  "A"         ; "‚"(ascii) E2(hex) 226(dec)
+         .ASCII  "A"         ; "„"(ascii) E3(hex) 227(dec)
+         .ASCII  "A"         ; "‰"(ascii) E4(hex) 228(dec)
+         .ASCII  "A"         ; "Â"(ascii) E5(hex) 229(dec)
+         .ASCII  "A"         ; "Ê"(ascii) E6(hex) 230(dec)
+         .ASCII  "C"         ; "Á"(ascii) E7(hex) 231(dec)
+         .ASCII  "E"         ; "Ë"(ascii) E8(hex) 232(dec)
+         .ASCII  "E"         ; "È"(ascii) E9(hex) 233(dec)
+         .ASCII  "E"         ; "Í"(ascii) EA(hex) 234(dec)
+         .ASCII  "E"         ; "Î"(ascii) EB(hex) 235(dec)
+         .ASCII  "I"         ; "Ï"(ascii) EC(hex) 236(dec)
+         .ASCII  "I"         ; "Ì"(ascii) ED(hex) 237(dec)
+         .ASCII  "I"         ; "Ó"(ascii) EE(hex) 238(dec)
+         .ASCII  "I"         ; "Ô"(ascii) EF(hex) 239(dec)
+         .ASCII  "O"         ; ""(ascii) F0(hex) 240(dec)
+         .ASCII  "N"         ; "Ò"(ascii) F1(hex) 241(dec)
+         .ASCII  "O"         ; "Ú"(ascii) F2(hex) 242(dec)
+         .ASCII  "O"         ; "Û"(ascii) F3(hex) 243(dec)
+         .ASCII  "O"         ; "Ù"(ascii) F4(hex) 244(dec)
+         .ASCII  "O"         ; "ı"(ascii) F5(hex) 245(dec)
+         .ASCII  "O"         ; "ˆ"(ascii) F6(hex) 246(dec)
+         .ASCII  " "         ; "˜"(ascii) F7(hex) 247(dec)
+         .ASCII  " "         ; "¯"(ascii) F8(hex) 248(dec)
+         .ASCII  "U"         ; "˘"(ascii) F9(hex) 249(dec)
+         .ASCII  "U"         ; "˙"(ascii) FA(hex) 250(dec)
+         .ASCII  "U"         ; "˚"(ascii) FB(hex) 251(dec)
+         .ASCII  "U"         ; "¸"(ascii) FC(hex) 252(dec)
+         .ASCII  "Y"         ; "˝"(ascii) FD(hex) 253(dec)
+         .ASCII  " "         ; "˛"(ascii) FE(hex) 254(dec)
+         .ASCII  "Y"         ; "ˇ"(ascii) FF(hex) 255(dec)
+         .END                  

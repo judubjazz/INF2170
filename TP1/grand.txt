@@ -1,0 +1,292 @@
+; ************************************************************
+;       Programme: grand.txt     version PEP813 sous Windows
+;
+;       Mon premier programme
+;       Affiche le plus grand nombre parmis ceux entrés par l'utilisateur.
+;
+;       auteur:   Julien Guité-Vinet
+;       courriel: Guite-vinet.julien@uqam.ca
+;       code permanent:GUIJ09058407
+;       date:     Hivers 2017
+;       cours:    INF2170
+; ***********************************************************
+
+
+
+         STRO    bienvenu,d  ;message "Bienvenue" 
+
+début:   STRO    phrase1,d   ;un nombre est demandé
+         LDA     0,i       
+  
+lire:    CHARI   char,d    
+         LDBYTEA char,d      ;analyse du caractère lu
+         CPA     10,i              
+         BREQ    finlire     ;si [ENTER], on termine la saisie
+         CPA     0x0020,i    
+         BREQ    max         ;si [SPACE] compare le plus grand nombre
+         CPA     0x002D,i
+         BREQ    negatif     ;si [-] le nombre sera négatif 
+         BR      sautFlag    ;sinon à sautFlag
+
+negatif: LDA     cntChar2,d 
+         CPA     0,i
+         BREQ    flagPrem    ;si negChar = 0 alors  '-' est le premier caractère
+         BR      sautFlag    ;sinon à sautFlag
+
+flagPrem:LDX     0,i
+         ADDX    1,i 
+         STX     flagNeg,d   ;flagNeg++
+         SUBX    1,i
+         LDA     cntChar,d   
+         ADDA    1,i
+         STA     cntChar,d   ;cntChar++
+         LDA     cntChar2,d   
+         ADDA    1,i
+         STA     cntChar2,d  ;cntChar2++
+         LDBYTEA char,d
+         STBYTEA avanChar,d  ;avanChar = char
+         BR      lire     
+
+       ;(nombre saisi X 10) & if (nombre > 32767) BR erreur
+
+sautFlag:LDX     nombre,d    
+         BREQ    pasmult     ;inutile de multiplier si le nombre = 0
+         ASLX                ; * 2
+         BRV     erreur
+         ASLX                ; * 4
+         BRV     erreur         
+         ADDX    nombre,d    ; * 5
+         BRV     erreur
+         ASLX                ; * 10
+         BRV     erreur
+         STX     nombre,d
+
+pasmult: NOP1                ;char >= 0 & char <= 9 
+         CPA     '0',i
+         BRLT    erreur2
+         CPA     '9',i
+         BRGT    erreur2
+         SUBA    '0',i       ;transformons le caractère ASCII en décimal
+         ADDA    nombre,d
+         BRV     erreur
+         STA     nombre,d
+         LDA     cntChar,d   
+         ADDA    1,i
+         STA     cntChar,d   ;cntChar++
+         LDA     cntChar2,d   
+         ADDA    1,i
+         STA     cntChar2,d  ;cntChar2++
+         LDBYTEA char,d
+         STBYTEA avanChar,d  ;avanChar = char
+         BR      lire
+
+
+         ; [ENTER] à été saisi
+
+finlire: LDA     cntChar,d     
+         BREQ    fin         ;si cntChar = 0
+         CPA     20,i        
+         BRGT    erreur3     ;si cntChar > 20
+         LDBYTEA avanChar,d
+         CPA     0x002D,i      
+         BREQ    erreur2     ;si '-' est le dernier caractère avant [ENTER] à erreur2 
+         LDA     flagErr,d     
+         CPA     1,i
+         BREQ    reset       ;si flagErr = 1 à reset sinon à max
+         BR      max
+
+         ; comparaison du plus grand nombre
+
+max:     LDBYTEA avanChar,d
+         CPA     0x002D,i
+         BREQ    erreur2     ;si avantChar = '-' à erreur2
+         LDA     flagNeg,d 
+         CPA     1,i
+         BREQ    convNeg     ;convertion au négatif si flagNeg = 1
+         BR      sautConv    ;sinon à sautConv 
+convNeg: LDA     nombre,d
+         NEGA   
+         STA     nombre,d    ;convertion réussie
+         LDA     0,i
+         STA     flagNeg,d 
+
+sautConv:LDA     cntChar,d
+         ADDA    1,i 
+         STA     cntChar,d   ;cntChar ++
+         LDA     cntChar2,d   
+         ADDA    1,i
+         STA     cntChar2,d  ;cntChar2++
+         LDA     countNbr,d 
+         CPA     0,i         
+         BRGT    sautMin     ;si countNbr > 0 à sautMin
+         ADDA    1,i
+         STA     countNbr,d  ;countNbr ++
+         LDA     -32767,i    ;limite minimum 
+         STA     grand,d   
+         CPA     nombre,d
+         BRGE    oubli       ;si minimum > nombre à oubli
+
+sautMin: LDA     grand,d     ;minimum
+         CPA     nombre,d
+         BRGE    oubli       ;si grand > nombre à oubli
+         BRLT    bigger      ;si nombre > grand à bigger
+
+oubli:   LDBYTEA char,d
+         ANDA    0x000A,i
+         CPA     10,i
+         BREQ    resultat    ;si dernier caractère = [enter] à resultat
+         LDA     0,i         
+         STA     nombre,d    ;nombre = 0 pour nouvelle lecture
+         STA     cntChar2,d  ;cntChar2 = 0 pour nouvelle lecture
+         LDBYTEA char,d
+         STBYTEA avanChar,d  ;avanChar = char
+         BR      lire 
+
+bigger:  LDBYTEA avanChar,d
+         ANDA    0x00FF,i
+         CPA     0x0020,i
+         BREQ    continue
+         LDA     nombre,d
+         STA     grand,d     ;grand = A
+continue:LDBYTEA char,d
+         ANDA    0x000A,i 
+         CPA     10,i
+         BREQ    resultat    ;si char = [ENTER] à resultat
+         LDA     0,i         
+         STA     nombre,d    ;nombre = 0 pour nouvelle lecture
+         STA     cntChar2,d  ;cntChar2 = 0 pour nouvelle lecture 
+         LDBYTEA char,d
+         STBYTEA avanChar,d  ;avanChar = char
+         BR      lire          
+
+resultat:LDA     countNbr,d 
+         CPA     0,i
+         BREQ    erreur2     ;si countNbr = 0 à erreur2
+         LDA     flagErr,d
+         CPA     1,i 
+         BREQ    reset       ;si flagErr = 1 à reset
+         LDA     grand,d
+         CPA     0,i
+         BREQ    goodZero    ;si grand = 0 à goodZero 
+         BR      sautZero    ;si grand > 0 à sautZero
+
+         ;s'assurer que zéro n'est pas [SPACE]
+
+goodZero:LDBYTEA avanChar,d 
+         CPA     0x0020,i
+         BREQ    erreur3     ;si avanChar = [SPACE] à erreur3
+
+sautZero:STRO    phrase2,d
+         DECO    grand,d     ;Le plus grand nombre est grand
+         CHARO   '.',i       
+         BR      reset
+
+
+
+   
+
+reset:   LDA     0,i         ;reset partiel, avec conditions, des variables 
+         STA     grand,d
+         STA     nombre,d    
+         STA     countNbr,d
+         STA     flagNeg,d
+         STA     cntChar2,d
+         LDA     flagErr,d
+         CPA     0,i
+         BREQ    correcte    ;si flagErr = 0 à correcte
+         BR      incorrec    ;sinon à incorrec
+correcte:LDA     0,i
+         STA     cntChar,d   ;cntChar = 0
+         BR      début
+
+incorrec:LDA     flagErr,d
+         CPA     0,i
+         BREQ    negChar0    ;si flagErr = 0 à negChar0 
+         LDBYTEA char,d
+         CPA     0x000A,i
+         BREQ    reset2      ;si [ENTER] à flagErr0
+         LDA     flagErr,d
+         CPA     1,i
+         BREQ    lire        ;si flagErr = 1 à lire
+         BR      début       ;sinon à début 
+
+negChar0:LDA     0,i
+         STA     cntChar2,d  ;cntChar2 = 0
+         LDA     flagErr,d
+         CPA     1,i
+         BREQ    lire        ;si flagErr = 1 à lire
+         BR      début       ;sinon à début
+
+flagErr0:LDA     0,i
+         STA     flagErr,d   ;flagErr = 0
+         STA     cntChar2,d  ;cntChar2 = 0  
+         BR      début
+
+reset2:  LDA     0,i         ;full reset >> réinitialise toutes les variables à 0, sauf char et avanChar
+         STA     grand,d
+         STA     nombre,d    
+         STA     countNbr,d
+         STA     cntChar,d 
+         STA     cntChar2,d   
+         STA     flagNeg,d
+         STA     flagErr,d     
+         BR      début  
+
+erreur:  NOP1                ;erreur pour le débordement
+         LDA     flagErr,d
+         CPA     1,i 
+         BREQ    sautErr     ;si flagErr = 1 à sautErr
+         STRO    inputErr,d  ;affiche l'erreur : nombre > 32767 | nombre < -32768
+sautErr: LDA     1,i
+         STA     flagErr,d   ;flagerr = 1 
+         BR      reset
+        
+erreur2: NOP1                ;erreur pour les chiffres
+         LDA     flagErr,d
+         CPA     1,i 
+         BREQ    sautErr2    ;si flagErr = 1 à sautErr2
+         LDBYTEA char,d
+         STBYTEA avanChar,d  ;avanChar = char 
+         STRO    inputErr,d  ;entrée invalide
+sautErr2:LDA     1,i
+         STA     flagErr,d   ;flagerr = 1 
+         BR      reset
+
+erreur3: NOP1                ;erreur pour les lettres
+         LDA     flagErr,d
+         CPA     1,i 
+         BREQ    sautErr3    ;si flagErr = 1 à sautErr3
+         LDBYTEA char,d
+         STBYTEA avanChar,d  ;avanChar = char 
+         STRO    inputErr,d  ;entrée invalide
+sautErr3:LDA     0,i         ;réinitialise les variables
+         STA     grand,d
+         STA     nombre,d    
+         STA     countNbr,d
+         STA     flagNeg,d
+         STA     cntChar,d 
+         STA     cntChar2,d
+         STA     flagErr,d       
+         BR      début
+         
+fin:     STRO    termine,d   ;affichage de fin normale
+         STOP   
+
+;;;;;;;;;;;;;;
+;; VARIABLE ;;
+;;;;;;;;;;;;;;  
+flagErr: .BLOCK  2           ; #2d    il y a eu erreur
+flagNeg: .BLOCK  2           ; #2d    il y a le caractère '-'  
+grand:   .BLOCK  2           ; #2d    le nombre le plus grand
+nombre:  .BLOCK  2           ; #2d    le nombre courrant
+cntChar: .BLOCK  2           ; #2d    compteur de caractères
+cntChar2:.BLOCK  2           ; #2d    compteur de caractères remis à zéro si flagNeg = 1
+countNbr:.BLOCK  2           ; #2d    compteur de nombres
+avanChar:.BLOCK  1           ; #1h    le caractère lu avant la lecture courrante 
+char:    .BLOCK  1           ; #1h    le caractère lu actuel  
+bienvenu:.ASCII  "Bienvenue à ce programme de comparaison des nombres.\nLes nombres entiers ont les seuls caractères d'entrée valide.\nUn maximum de 20 caractères est permis.\nLes nombres doivent être compris entre -32767 et 32767.\nUn ou plusieurs espaces délimitent les nombres.\nExemple : 20 30    -1\nPour sortir, appuyez sur [ENTRÉE] sans inscrire de chiffres.\x00"
+phrase1: .ASCII  "\n\n\nDonnez-moi des nombres, [ENTRÉE] pour saisir : \n\x00"      
+phrase2: .ASCII  "\nLe plus grand nombre est \x00"
+inputErr:.ASCII  "\nEntrée invalide.\x00"
+termine: .ASCII  "\n\nFin normale du programme.\x00" 
+         .END                  

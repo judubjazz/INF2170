@@ -1,0 +1,44 @@
+Bienvenue à ce programme de comparaison des nombres.
+Les nombres entiers ont les seuls caractères d'entrée valide.
+Un maximum de 20 caractères est permis.
+Les nombres doivent être compris entre -32767 et 32767.
+Un ou plusieurs espaces délimitent les nombres.
+Exemple : 20 30    -1
+Pour sortir, appuyez sur [ENTRÉE] sans inscrire de chiffres.
+
+
+Donnez-moi des nombres, [ENTRÉE] pour saisir : 
+44 55 33
+
+Le plus grand nombre est 55.
+
+
+Donnez-moi des nombres, [ENTRÉE] pour saisir : 
+1 02 -1
+
+Le plus grand nombre est 2.
+
+
+Donnez-moi des nombres, [ENTRÉE] pour saisir : 
+-12345   -30000
+
+Le plus grand nombre est -12345.
+
+
+Donnez-moi des nombres, [ENTRÉE] pour saisir : 
+4444 33333
+
+Entrée invalide.
+
+
+Donnez-moi des nombres, [ENTRÉE] pour saisir : 
+            
+
+Entrée invalide.
+
+
+Donnez-moi des nombres, [ENTRÉE] pour saisir : 
+
+
+
+Fin normale du programme.

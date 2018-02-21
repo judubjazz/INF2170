@@ -1,0 +1,36 @@
+Bienvenue dans le programme LISTE qui affiche en ordre croissant des numéros de pièces.
+Les pièces sont classées en ordre croissant de longueur puis de suffixes puis de dates.
+Un numéro de pièce est composé d'une date (AAMMJJ) suivi d'un tiret suivi d'un suffixe composé de 1 ou 2 caractères numériques.
+Les pièces sont séparées par des virgules seulement.
+Un maximum de cinq pièces est permis.
+Exemple:490101-12,990101-12,010101-12,960101-3
+Pour sortir, appuyez seulement sur [ENTER].
+
+Entrez un ou plusieurs numéros de pièce. Seulement [ENTER] pour sortir : 
+
+160220-12-->170909-12-->171010-12-->171030-12-->171125-12
+
+
+Entrez un ou plusieurs numéros de pièce. Seulement [ENTER] pour sortir : 
+
+170201-1-->170201-2-->170201-01-->170201-12-->170201-21
+
+
+Entrez un ou plusieurs numéros de pièce. Seulement [ENTER] pour sortir : 
+
+170909-1-->170909-00-->170909-11-->170909-13-->170909-31
+
+
+Entrez un ou plusieurs numéros de pièce. Seulement [ENTER] pour sortir : 
+
+170909-5-->170909-6-->170909-7-->170909-8-->170909-04
+
+
+Entrez un ou plusieurs numéros de pièce. Seulement [ENTER] pour sortir : 
+
+960101-3-->990101-12-->010101-12-->490101-12
+
+
+Entrez un ou plusieurs numéros de pièce. Seulement [ENTER] pour sortir : 
+
+Fin normale du programme.

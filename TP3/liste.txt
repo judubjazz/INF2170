@@ -1,0 +1,703 @@
+; *****************************************************************
+;       Programme: LISTE.txt    version PEP813 sous Windows
+;
+;       Ce programme affiche en ordre croissant des numéros de pièces.
+;       Un maximum de cinq pièces est permis
+;       Les caractères accentués sont acceptés.
+;
+;       but:                 concevoir un programme de type assembleur avec Pep/8 qui analyse une liste chaînée à l'aide des sous-programmes avec paramètres.
+;       auteur:              Julien Guité-Vinet
+;       auteure:             Seynabou Gueye
+;       adresse courriel:    gueye_diakhate.seynabou@uqam.ca
+;       adresse courriel:    guité-vinet.julien@uqam.ca
+;       date:                Hiver 2017
+;       cours:               INF2170
+;       code permanent:      GUIJ09058407
+;       code permanent:      GUES10518903
+; *****************************************************************
+         STRO    bienvenu,d  ;message de bienvenue
+         LDBYTEX index,d     
+         ADDX    2,i         ;on réserve 2 cases entre chaques pièces pour la longeur de la pièce et l'adresse de la pièce suivante
+         STBYTEX index,d     
+demande: STRO    solicite,d  ;sollicite une phrase ou une lettre
+while1:  LDA     0,i         
+         CHARI   char,d      ;une entrée de caractère
+         LDBYTEA char,d      
+         STBYTEA char,d      
+         CPA     0x000A,i    ; est-ce [enter]?
+         BREQ    endWhil2    
+         CPA     ',',i       
+         BREQ    endWhil1    ;est-ce une virgule?
+         CALL    charVali    ;valider si le caractère est valide
+         LDA     flagErr,d   
+         CPA     1,i         
+         BREQ    erreur      ;vérifier s'il y a eu erreur
+         CALL    metEnTab    ;enregistre les données dans un tableau
+         BR      while1      ;retour à la boucle1
+endWhil2:LDA     0x0001,i
+         STBYTEA cmp_comp,d  ;condition d'arrêt des boucles 
+         LDBYTEA lgnPiece,d  ;ensuite on regarde la longeur de la pièce
+         CPA     0x0007,i
+         BRLT    ver_err     ;si la pièce est plus petite que 7, on doit vérifier s'il y a eu erreur
+         BR      endWhil1
+ver_err: CPA     0x0001,i    ;si un numéro a été saisi, il y a eu erreur
+         BRGE    erreur
+endWhil1:LDBYTEA cmp_vir,d
+         ADDA    0x0001,i
+         STBYTEA cmp_vir,d
+         LDBYTEX index,d     
+         CPX     2,i         
+         BREQ    fin         ;si le premier caractère est enter, à fin
+         LDBYTEA indPiece,d  
+         CPA     0,i         ;si il y a eu une pièce entrée et seulement enter à la prochaine demande, à analyse
+         BREQ    analyse     
+c_while1:SUBX    avantLgn,d  ;SUBX sur 2 octets, avantLgn = 00,suivi de lngPiece
+         LDBYTEA lgnPiece,d  ;permet d'
+         SUBX    0x0001,i    
+         STBYTEA tableau,x   ;enregister la longeur de la pièce au bon endroit dans la chaîne
+         LDBYTEA cmpPiece,d  
+         CPA     1,i         
+         BRGE    pluPiece    ;s'il y a plusieurs pièces, on compare celles-ci. sinon on place la première pièce
+
+
+;;;première pièce
+         LDA     -1,i        
+         SUBX    0x0001,i    
+         STBYTEA tableau,x   ;la première pièce est aussi la dernière, alors elle pointe vers FF  
+         
+         LDA     0,i         ;;on réinitialise les variables        
+         STBYTEA indPiece,d  ;indPiece = 0  
+         STBYTEA lgnPiece,d  ;lgnPiece = 0
+         LDA     0x0001,i    
+         STBYTEA cmpPiece,d  ;cmpPiece++
+         LDBYTEA index,d     
+         ADDA    0x0002,i    
+         STBYTEA index,d     ;ajoute deux à l'indice pour les cases de la longueur et du suivant
+         STBYTEX premier,d   ;premier = 0  
+         STX     preceden,d  
+         STBYTEX suivant,d   
+         STBYTEX courrant,d  
+         STBYTEX queue,d     
+         BR      while1   
+  
+                
+;;plusieurs pièces
+pluPiece:LDX     courrant,d
+         ADDX    0x0001,i    
+         LDBYTEA tableau,x  ;la longueur de la pièce courrante
+         ADDA    courrant,d  
+         ADDA    0x0002,i    
+         STA     courrant,d  
+c_Piece: LDX     courrant,d  
+         ADDX    0x0001,i    ;la longueur de la pièce
+         LDBYTEA tableau,x   
+         ADDA    0x0002,i    
+         STA     -2,s        
+         LDA     courrant,d  ;additionée a l'indice de la pièce courrante
+         ADDA    -2,s        
+         STA     suivant,d   ;donne l'indice de la prochaine pièce
+         CALL    compare     ;méthode qui compare les pièces entre elles
+   
+         LDA     0,i         ;réinitialise les variables       
+         STBYTEA jour20,d    
+         STBYTEA jour30,d    
+         STBYTEA indPiece,d  
+         STBYTEA lgnPiece,d  
+         STA     flagErr,d   
+         LDBYTEA cmpPiece,d  
+         ADDA    1,i         
+         STBYTEA cmpPiece,d  
+         LDBYTEA index,d     
+         ADDA    0x0002,i    
+         STBYTEA index,d 
+
+         LDBYTEA cmp_comp,d  ;s'il y a eu un [enter]
+         CPA     0x0001,i
+         BREQ    analyse     ;fin de la boucle        
+         BR      while1     ;sinon on redemande
+    
+     
+;;;analyse
+analyse: LDBYTEA cmp_vir,d
+         CPA     6,i
+         BRGE    erreur
+         LDA     0,i         
+         STBYTEA cmp_comp,d  ;compteur de comparaison est remis à zero 
+         LDX     premier,d   
+         ADDX    0x0001,i    
+         LDBYTEA tableau,x   
+         STBYTEA lgnPiece,d  ;sauve la longeur de la pièce
+         ADDX    0x0001,i    ;place l'indice au premier numéro de la pièce   
+c_affich:CHARO   tableau,x   
+         ADDX    1,i         ;indice++      
+         LDBYTEA cmp_comp,d  
+         ANDA    0x00FF,i    
+         ADDA    0x0001,i       
+         STBYTEA cmp_comp,d  ;cmp_comp++  
+         CPA     0x0006,i    
+         BREQ    tiret       ;à l'indice 6, il y aura un tiret      
+         LDA     cmp_comp,d  
+         ANDA    0xFF00,i    
+         CPA     lgnPiece,d  
+         BREQ    f_affich    ;fin de l'affichage lorsque le compteur = la longeur de la pièce  
+         BR      c_affich    ;sinon on continue l'affichage   
+tiret:   CHARO   '-',i       
+         BR      c_affich 
+   
+f_affich:LDX     premier,d   
+         LDBYTEA tableau,x   
+         ANDA    0x00FF,i    
+         CPA     0x00FF,i    
+         BREQ    arret       ;on n'affiche pas les flèches si la pièce pointe vers FF, car c'est la dernière pièce à afficher
+         CHARO   '-',i       ;sinon on affiche les flèches      
+         CHARO   '-',i       
+         CHARO   '>',i
+         LDBYTEX tableau,x   
+         STX     premier,d   ;le premier devient le suivant  
+         BR      analyse     ;et on recommance
+arret:   CHARO   '\n',i
+         CALL    reset 
+         BR      demande 
+   
+erreur:  STRO    invalIn,d   ;Entrée invalide
+         CALL    reset       
+         BR      demande     
+fin:     STRO    normale,d   ;fin normale
+         STOP                
+;                *******************************************
+;                **                                       **
+;                **          SOUS-PROGRAMMES              **
+;                **                                       **
+;                *******************************************
+;;;;;;;;;;;;;;;;;;;;;;;;;;
+suffix2: .EQUATE 0           ; Paramètre #2h
+suffix:  .EQUATE 2           ; Paramètre #2h
+regX:    .EQUATE 4           ; Variable locale #2d
+regA:    .EQUATE 6           ; Variable locale #2d
+
+compare: SUBSP   8,i         ;#regA #regX #suffix #suffix2
+         STA     regA,s      
+         STX     regX,s      ;sauve les registres A et X
+         LDX     premier,d     
+         ADDX    0x0001,i    ;l'indice de la longueur
+         LDBYTEA tableau,x   
+         ANDA    0x00FF,i    
+         STA     suffix,s    ;sauve la longueur du précédent
+         LDX     courrant,d  
+         ADDX    0x0001,i    
+         LDBYTEA tableau,x   
+         STA     suffix2,s   ;sauve la longeur du courrant
+         LDA     suffix2,s   
+         CPA     suffix,s    ;compare les deux longueurs
+         BREQ    lgEgal      
+         BRLT    lgPetit     
+         BRGT    lgGrand 
+    
+c_compar:LDA     regA,s      
+         LDX     regX,s      
+         ADDSP   8,i         ;#regA #regX #suffix #suffix2
+         RET0                
+
+;;sous-programme qui insère un noeud avant la tête
+valCour:.EQUATE 0           ;#2h  variable locale du courrant
+
+pluPetit:SUBSP   2,i         ;#valCour  
+         LDA     flagErr,d   
+         ANDA    0x00FF,i    
+         CPA     0x0001,i    
+         BREQ    r_plP2      ;condition de sortie de la méthode pluGrand   
+         LDX     premier,d     
+         LDBYTEX tableau,x   
+         STX     valCour,s   ;on sauve l'adresse du premier
+         LDX     courrant,d     
+         LDA     premier,d  
+         STBYTEA tableau,x   ;la courrant pointe vers le premier
+         LDX     premier,d  
+         LDA     valCour,s   
+         STBYTEA tableau,x   ;enregistre dans le tableau l'adresse du premier pour le courrant
+         LDA     courrant,d
+         STA     premier,d   ;le courrant devient le premier
+         LDX     premier,d
+         LDBYTEA tableau,x
+         STA     suivant,d   ;on sauve le nouveau suivant
+
+r_plP:   ADDSP   2,i         ;#valCour
+         RET0
+r_plP2:  ADDSP   2,i         ;#valCour
+         LDA     premier,d
+         STA     preceden,d  ;retour de la recursivité, le précédent redevient le premier  
+         RET0
+
+;;sous-programme qui trouve la queue de la chaîne
+;tant que le premier ne pointe pas vers FF, le premier devient le suivant
+trouv_q: LDX     premier,d
+c_trouv: LDBYTEA tableau,x
+         ANDA    0x00FF,i
+         CPA     0x00FF,i 
+         BREQ    f_trouv
+         STA     queue,d    
+         LDX     queue,d
+         BR      c_trouv
+f_trouv: STX     queue,d
+         RET0 
+
+;;sous-programme qui insère un noeud entre un noeud plus petit et un noeud plus grand
+;;tant qu'on ne trouve pas la fin de la chaîne ou un noeud plus petit, le suivant devient le premier
+varPrem:.EQUATE 4           ;#2h      ;variable locale du premier
+varPrece:.EQUATE 2          ;#2h      ;variable locale du précédent    
+varQueue:.EQUATE 0          ;#2h      ;variable locale de la queue
+
+
+pluGrand:CALL    trouv_q     ;trouve la queue de la chaîne
+         LDA     0x0001,i
+         STA     flagErr,d   ;condition de sortie de la recursivité
+         SUBSP   6,i         ;#varPrem #varPrece #varQueue
+         LDA     premier,d   
+         CPA     0x00FF,i
+         BREQ    r_plG       ;si le premier est le dernier, on sort de la méthode
+         LDA     queue,d
+         STA     varQueue,s  ;varQueue= queue
+         LDA     preceden,d
+         STA     varPrece,s  ;varPrece = preceden
+         LDA     premier,d
+         STA     varPrem,s   ;varPrem = premier 
+         LDX     premier,d
+         LDBYTEA tableau,x
+         STA     premier,d   ;le suivant devient le premier
+         LDX     premier,d
+         LDBYTEA tableau,x
+         STA     suivant,d   ;le suivant du suivant devient le suivant   
+         CALL    compare     ;méthode recursive qui trouve où insérer le noeud
+         
+         LDA     flagErr,d   ;condition d 'arrêt de la recursivité
+         CPA     0x0001,i
+         BREQ    switch
+         BR      r_plG       ;sinon on recommance       
+   
+switch:  LDX     varPrem,s   
+         LDBYTEA tableau,x
+         LDX     courrant,d
+         STBYTEA tableau,x   ;le courrant pointe le suivant
+         LDX     varPrem,s 
+         LDA     courrant,d
+         STBYTEA tableau,x   ;le premier pointe  le courrant
+         LDA     0,i
+         STA     flagErr,d
+             
+r_plG:   LDA     varPrem,s   ;on récupère les variables initiales
+         STA     premier,d
+         LDA     varPrece,s 
+         STA     preceden,d
+         ADDSP   6,i          ;#varPrem #varPrece  #varQueue
+         RET0  
+
+;;sous-programme qui valide les suffixes de deux pièces car leures longeurs sont égales
+;;valCour = valeur courrante
+lgGrand: CALL    pluGrand    ;la pièce courrante est plus grande que la première   
+         BR      c_compar 
+lgPetit: CALL    pluPetit    ;la pièce courrante est plus petite que la première   
+         BR      c_compar     
+lgEgal:  SUBSP   2,i         ;#valCour 
+         LDX     courrant,d  
+         ADDX    0x0008,i    
+         LDA     tableau,x   
+         STA     valCour,s   ;valCour = suffixe du courrant  
+         LDX     premier,d     
+         ADDX    0x0008,i    
+         LDA     tableau,x   
+         CPA     valCour,s   ;on compare avec le suffixe du premier   
+         BREQ    sufEgal     ;le suffixe est égal    
+         BRLT    sufGrand    
+         BRGT    sufPetit    
+r_lEgal: ADDSP   2,i         ;#valCour
+         BR      c_compar    
+     
+;;sous-programme qui valide les années de deux pièces car leurs suffixes sont égaux
+sufGrand:CALL    pluGrand    ;la pièce courrante est plus grande que la première   
+         BR      r_lEgal     
+sufPetit:CALL    pluPetit    ;la pièce courrante est plus petite que la première    
+         BR      r_lEgal 
+sufEgal: LDX     courrant,d  
+         ADDX    0x0002,i    
+         LDA     tableau,x   
+         STA     valCour,s   ;valCour = an du courrant 
+         LDA     valCour,s 
+         CALL    an8090      ;on doit valider si l'année courrante est entre 80 et 99
+         STA     valCour,s  
+         LDX     premier,d     
+         ADDX    0x0002,i    
+         LDA     tableau,x 
+         CALL    an8090      ;on doit valider si l'année du premier est entre 80 et 99
+         CPA     valCour,s   ;on compare l'année du courrant avec l'année du premier   
+         BREQ    anEgal      ;les années sont pareilles     
+         BRLT    anGrand     
+         BRGT    anPetit     
+         BR      r_lEgal     
+ 
+;sous-programme qui place les années entre 80 et 99 au bon siècle
+an8090:  CPA     0x3830,i     ;si l'an est plus grand que 80
+         BRGE    c_anVal     ;continuer validation
+         RET0
+c_anVal: CPA     0x3939,i    ;si l'an est plus petit que 99
+         BRLE    c_anVal2    ;continuer validation  
+         RET0
+c_anVal2:SUBA    0x1000,i
+         RET0 
+  
+;;sous-programme qui valide les mois de deux pièces car leures années sont égales
+anGrand: CALL    pluGrand    ;la pièce courrante est plus grande que la première     
+         BR      r_lEgal     
+anPetit: CALL    pluPetit    ;la pièce courrante est plus petite que la première     
+         BR      r_lEgal  
+anEgal:  LDX     courrant,d  
+         ADDX    0x0004,i    
+         LDA     tableau,x   
+         STA     valCour,s   ;valCour = mois du courrant
+         LDX     premier,d     
+         ADDX    0x0004,i    
+         LDA     tableau,x  
+         CPA     valCour,s   ;on compare le mois du courrant avec le mois du premier   
+         BREQ    moiEgal     ;les mois sont égaux    
+         BRLT    moiGrand    
+         BRGT    moiPetit    
+                 
+;;sous-programme qui valide les jours de deux pièces car leurs mois sont égales 
+moiGrand:CALL    pluGrand    ;la pièce courrante est plus grande que la première   
+         BR      r_lEgal     
+moiPetit:CALL    pluPetit    ;la pièce courrante est plus petite que la première     
+         BR      r_lEgal
+moiEgal: LDX     courrant,d  
+         ADDX    0x0006,i    
+         LDA     tableau,x   
+         STA     valCour,s   ;valCour = jour du courrant  
+         LDX     premier,d     
+         ADDX    0x0006,i    
+         LDA     tableau,x   
+         CPA     valCour,s    ;on compare le jour du courrant avec le jour du premier    
+         BREQ    jouPetit     ;si la pièce est égale à la première on la place avant    
+         BRLT    jouGrand    
+         BRGT    jouPetit    
+    
+jouGrand:CALL    pluGrand    ;la pièce courrante est plus grande que la première   
+         BR      r_lEgal     
+jouPetit:CALL    pluPetit    ;la pièce courrante est plus pretite que la première   
+         BR      r_lEgal 
+           
+;;sous-programme qui place une pièce dans le tableau 
+metEnTab:LDBYTEA char,d      
+         CPA     '-',i       
+         BREQ    tab_ret2     ;si le caractère est '-'on ne l' ajoute pas au tableau et on incrémente l'indice de la pièce
+         CPA     ',',i       
+         BREQ    tab_ret     ;si le caractère est ','on ne l' ajoute pas au tableau
+         LDBYTEX index,d     
+         ANDX    0x00FF,i
+         STBYTEA tableau,x   ;sinon enregistrer dans le tableau
+         ADDX    1,i         
+         LDBYTEA lgnPiece,d  
+         CPA     0x0009,i    ;maximum de 8 chiffres pour une pièce,
+         BREQ    tab_err     
+         STBYTEX index,d     ;index++    incremente l'index du tableau
+         LDBYTEA lgnPiece,d  
+         ADDA    1,i         
+         STBYTEA lgnPiece,d  ;lgnPiece++
+tab_ret2:LDBYTEA indPiece,d  
+         ADDA    1,i         
+         STBYTEA indPiece,d  ;indPiece++
+         RET0                
+tab_err: LDA     flagErr,d   
+         ADDA    1,i         
+         STA     flagErr,d   ;il y a eu erreur 
+tab_ret: RET0    
+            
+;;sous programme qui valide le format d'un numéro de pièce
+charVali:ANDA    0x00FF,i    
+         CPA     0x0030,i    
+         BRLT    nonChif     ;le chiffre est plus petit que 0
+         CPA     0x0039,i    
+         BRGT    nonChif     ;le caractère est plus grand que 9
+         LDBYTEA indPiece,d  
+         CPA     0,i         
+         BREQ    index0      ; analyse le premier caractère pour les années
+         CPA     1,i         ;analyse le deuxième caractère des années
+         BREQ    index1      
+         CPA     2,i         
+         BREQ    index2      ;analyse le troisième caractère pour les mois
+         CPA     3,i         
+         BREQ    index3      
+         CPA     4,i         
+         BREQ    index4      ;analyse le cinquième caractère pour les jours
+         CPA     6,i 
+         BREQ    index6b
+         LDBYTEA novDec,d    
+         CPA     0x0001,i    
+         BREQ    index3      ;analyse le quatrième caractère si le premier chiffre du mois est 1
+         LDBYTEA jour20,d    
+         CPA     0x0001,i    
+         BREQ    i5jour20    ;analyse le sixième caractère si le premier chiffre des jours est 2
+         LDBYTEA jour30,d    
+         CPA     0x0001,i    
+         BREQ    i5jour30    ;analyse le sixième caractère si le premier chiffre des jours est 3
+         RET0  
+
+;;;valide le premier chiffre d'une année              
+index0:  LDBYTEA char,d      ;l'année ne peut pas commencer par 5 , 6 ou 7
+         CPA     0x0035,i    
+         BRGE    c_index0    ;si l'année commence par un chiffre plus grand que 5 on valide que ce soit plus grand que 7
+         SUBA    0x0030,i    
+         CPA     0,i         
+         BREQ    j_index0    ;jump  si l'année commence par 0    
+         CALL    mult10      ;car on ne peut multiplier 0 par 10          
+         STBYTEA annee,d     ;sinon on multiplie le premier chiffre de l'année par 10
+         RET0                
+c_index0:CPA     0x0037,i    
+         BRLE    flag        ;si plus petit que 7 il y a eu erreur
+         SUBA    0x0030,i    
+         CPA     0,i         
+         BREQ    j_index0    ;jump  si l'année commence par 0
+         BR      mult10      ;car on ne peut multiplier 0 par 10      
+j_index0:STBYTEA annee,d     ;sinon on multiplie le premier chiffre de l'année par 10
+         RET0  
+
+;;;valide le deuxième chiffre d'une année               
+index1:  LDBYTEA char,d      
+         SUBA    0x0030,i    
+         STBYTEA char,d      
+         LDA     annee,d     
+         ADDA    char,d           
+         STA     annee,d     ;on sauve le premier chiffre de l'année    
+         LDBYTEA char,d      
+         ADDA    0x0030,i    
+         STBYTEA char,d      ;on remet le registre comme il était      
+         RET0   
+
+;;;valide le premier chiffre d'un mois             
+index2:  LDBYTEA char,d      
+         CPA     0x0032,i    
+         BRGE    flag        ;le mois ne peut commencer que par 0 ou 1
+         CPA     0x0031,i    
+         BREQ    c_index2    
+         CPA     0x0030,i    
+         BREQ    j_index2    ;jump si le mois commence par 0 
+         BR      mult10      ;car on ne peut multiplier 0 par 10            
+j_index2:SUBA    0x0030,i    
+         STBYTEA mois,d      ;sinon on multiplie par 10 le premier chiffre du mois      
+         RET0                
+c_index2:LDA     0x0001,i    ;si le mois commence par 1, à l'indice suivant on validera les données
+         STBYTEA novDec,d    ;pour les mois d'octobre à décembre   
+         LDA     0x000A,i    
+         STBYTEA mois,d      
+         RET0  
+
+;;;valide le deuxième chiffre d'un mois                
+index3:  LDBYTEA novDec,d    
+         CPA     1,i         
+         BREQ    i3Valid     ;si le mois commence par 1 on doit valider l'indice3    
+         BR      j_index3    ;sinon jump    
+i3Valid: LDBYTEA char,d      
+         CPA     0x0033,i    
+         BRGE    flag        ;si le mois commence par 1, le chiffre suivant doit être entre 0 et 2       
+j_index3:LDBYTEA char,d           
+         SUBA    0x0030,i    ;on soustrait 30 au caractère pour avoir le chiffre du mois    
+         STBYTEA char,d      
+         LDA     mois,d      
+         ADDA    char,d           
+         STA     mois,d      ;on ajoute le premier chiffre du mois       
+         LDA     0,i         
+         STBYTEA novDec,d    ;il n'y a pas eu d'erreur pour les mois > que 10, alors on remet le flag à 0
+         LDBYTEA char,d      
+         ADDA    0x0030,i    
+         STBYTEA char,d      ;on remet le registre comme il était     
+         RET0  
+
+;;;valide le premier chiffre d'un jour             
+index4:  LDBYTEA char,d      
+         CPA     0x0034,i    
+         BRGE    flag        ;le jour ne peut pas commencer par 4
+         CPA     0x0032,i    
+         BREQ    c_index4    ;si le jour commence par 2, un drapeau se lève    
+         CPA     0x0033,i    
+         BREQ    cIndex4     ;si le jour commence par 3, un drapeau se lève     
+         BR      retour1     
+c_index4:LDA     0x0001,i    
+         STBYTEA jour20,d    ;le drapeau jour20
+         RET0                
+cIndex4: LDA     0x0001,i    
+         STBYTEA jour30,d    ;le drapeau jour30
+         RET0   
+
+;;;valide le deuxième chiffre d'un jour commençant par 20             
+i5jour20:LDBYTEA char,d      
+         CPA     0x0039,i    
+         BREQ    bisex       ;si le jour est 29 , valider l'année et le mois
+         LDA     0,i         
+         STBYTEA jour20,d    ;s'il n'y pas eu d'erreur le flag jour20 est remis à 0
+         RET0                
+bisex:   LDBYTEA annee,d     
+         ASRA                
+         BRC     flag        
+         ASRA                
+         BRC     flag        ;l'année doit être divisible par 4
+         LDBYTEA mois,d      
+         CPA     0x0002,i    
+         BREQ    r_bisex     ;le mois doit être février
+         BR      flag        
+r_bisex: LDA     0,i         
+         STBYTEA jour20,d    
+         RET0 
+
+;;;valide le deuxième chiffre d'un jour commençant par 30                
+i5jour30:LDBYTEA char,d      
+         CPA     0x0032,i    ;si le jour commence par 3, le chiffre suivant ne doit pas être supérieur à 1
+         BRGE    flag        
+         CPA     0x0030,i    
+         BREQ    validJ30    ;si le jour est 30 ou 31, le mois doit être valide   
+         BRGT    validJ31    
+         LDA     0,i         
+         STBYTEA jour30,d    ;s'il n'y pas eu d'erreur le flag jour30 est remis à 0
+         RET0   
+
+;;;valide les mois des jours 30             
+validJ30:LDBYTEA mois,d      
+         CPA     2,i         
+         BREQ    flag        ;le mois ne doit pas être février        
+         LDA     0,i         
+         STBYTEA jour30,d    ;s'il ny a pas eu d'erreur le flag est remis à 0
+         RET0 
+
+;;;valide les mois des jours 31                 
+validJ31:LDBYTEA mois,d      
+         CPA     2,i         
+         BREQ    flag         ;les mois ne doivent pas être février         
+         CPA     4,i         
+         BREQ    flag         ;avril        
+         CPA     6,i         
+         BREQ    flag         ;juin        
+         CPA     9,i         
+         BREQ    flag         ;septembre         
+         CPA     11,i        
+         BREQ    flag         ;ou novembre       
+         LDA     0,i         
+         STBYTEA jour30,d    ;s'il ny a pas eu d'erreur le flag est remis à 0
+         RET0 
+
+;;;valide le caractère pour l'indice 6                 
+index6:  LDBYTEA indPiece,d  ;le caractère ne peut qu'être '-'
+         CPA     6,i         
+         BREQ    retour1     ;si l'indice est 6, continuer validation
+         BR      flag        ;sinon il y a eu erreur
+
+;;;valide le caractère pour l'indice 6                 
+index6b: LDBYTEA char,d
+         CPA     '-',i         
+         BREQ    retour1     ;si l'indice est 6, continuer validation
+         BR      flag        ;sinon il y a eu erreur
+
+;;;valide le caractère pour l'indice 8 et 9  
+index89: LDBYTEA indPiece,d  ;le caractère ne peut qu'être ','
+         CPA     8,i         
+         BREQ    retour1     
+         CPA     9,i         
+         BREQ    retour1     
+         BR      flag        ;si non il y a eu erreur
+
+;valide les caractères non-numéraux 
+nonChif: CPA     '-',i       ;on doit valider les caractères qui ne sont pas des chiffres
+         BREQ    index6      
+         CPA     ',',i       
+         BREQ    index89     
+flag:    LDA     flagErr,d   
+         ADDA    1,i         
+         STA     flagErr,d   ;sinon il y eu erreur  
+retour1: RET0    
+            
+;sous-programme qui multiplie par 10
+mult10:  ASLA                
+         ASLA                
+         ADDA    1,i         
+         ASLA                
+         RET0
+               
+;sous-programme qui réinitialise les variables à 0
+reset:   LDA     0x0000,i 
+         STA     cmp_vir,d
+         STA     premier,d
+         STA     preceden,d
+         STA     queue,d 
+         STA     courrant,d
+         STA     suivant,d   
+         STA     annee,d     
+         STA     mois,d      
+         STA     suffix,d    
+         STA     suffix2,d   
+         STA     jour20,d    
+         STA     jour30,d    
+         STA     indPiece,d  
+         STA     lgnPiece,d  
+         STBYTEA  char,d      
+         STA     flagErr,d   
+         STA     cmpPiece,d 
+         STA     cmp_comp,d 
+         STA     jour30,d    
+         STA     jour20,d    
+         STA     novDec,d    
+         LDX     0,i         ;for i = 0       
+         LDBYTEX index,d     
+         ADDX    2,i         ;on réserve 2 cases entre chaques pièces pour la longeur de la pièce et l'adresse de la pièce suivante
+         STBYTEX index,d 
+f_reset: CPX     50,i        ;vide le tableau ( pas nécessaire, mais facilite le debug)      
+         BREQ    c_reset     ;continue reset
+         LDA     0,i         
+         STA     tableau,x   
+         ADDX    2,i         ;i++        
+         BR      f_reset     ;for reset     
+c_reset: LDBYTEA flagErr,d
+         CPA     0x0001,i
+         BREQ    vid_tamp 
+         RET0
+vid_tamp:CHARI   char,d      
+         LDBYTEA char,d      
+         STBYTEA char,d      
+         CPA     0x000A,i    ; est-ce [enter]?  >>  vide le tampon
+         BREQ    r_reset    
+         BR      vid_tamp     ;continue reset     
+r_reset: LDA     0,i
+         STA     flagErr,d
+         RET0    
+
+            
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;                            ;;
+;;       VARIABLES            ;;
+;;                            ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+bienvenu:.ASCII  "Bienvenue dans le programme LISTE qui affiche en ordre croissant des numéros de pièces.\nLes pièces sont classées en ordre croissant de longueur puis de suffixes puis de dates.\nUn numéro de pièce est composé d'une date (AAMMJJ) suivi d'un tiret suivi d'un suffixe composé de 1 ou 2 caractères numériques.\nLes pièces sont séparées par des virgules seulement.\nUn maximum de cinq pièces est permis.\nExemple:490101-12,990101-12,010101-12,960101-3\nPour sortir, appuyez seulement sur [ENTER].\x00"
+solicite:.ASCII  "\n\nEntrez un ou plusieurs numéros de pièce. Seulement [ENTER] pour sortir : \n\n\x00"
+normale: .ASCII  "Fin normale du programme.\x00"
+invalIn: .ASCII  "Entrée invalide.\x00"
+cmp_vir: .BLOCK  1           ;#1d         compteur de virgules
+cmp_comp:.BLOCK  1           ;#1d         compteur pour les boucles de comparaisons
+avantLgn:.BLOCK  1           ;#1d         octet vide
+lgnPiece:.BLOCK  1           ;#1d         la longeur du numéro de pièce
+premier: .BLOCK  2           ;#2h         la tete de  la liste chaînée
+preceden:.BLOCK  2           ;#2h         tête temporaire de la liste chaînée
+courrant:.BLOCK  2           ;#2h         le noeud courrant
+suivant: .BLOCK  2           ;#2h         le noeud suivant
+queue:   .BLOCK  2           ;#2h         la queue de la chaîne
+cmpPiece:.BLOCK  1           ;#1d         le nombre total de pièces
+indPiece:.BLOCK  1           ;#1d         l'indice de la piece
+index:   .BLOCK  1           ;#1d         l'indice du tableau final
+char:    .BLOCK  1           ;#1h         un caratère lu
+flagErr: .BLOCK  2           ;#2d         booléen
+novDec:  .BLOCK  1           ;#1d         flag pour les mois de novembre et décembre
+jour20:  .BLOCK  1           ;#1d         flag pour les jours commençant par 2
+jour30:  .BLOCK  1           ;#1d         flag pour les jours commençant par 3
+annee:   .BLOCK  1           ;#1d         l'année de la pièce suivit d'un octet vide
+vide:    .BLOCK  1           ;#1d
+annee2:  .BLOCK  1           ;#1d         l'année de la pièce suivante suivi d'un octet vide
+vide4:   .BLOCK  1           ;#1d
+mois:    .BLOCK  1           ;#1d         le mois de la pièce suivi d'un octet vide
+vide2:   .BLOCK  1           ;#1d
+mois2:   .BLOCK  1           ;#1d         le mois de la pièce suivante suivi d'un octet vide
+vide5:   .BLOCK  1           ;#1d
+tableau: .BLOCK  50          ;#1h50a      premier tableau de lecture
+         .END                  
